@@ -23,28 +23,15 @@ addonTable.MountDB = {
 	[64731] = {[5] = true, [15] = true, [25] = true, [120] = true, [39] = true},  -- Sea Turtle
 	
 	[33189] = {[4] = true, [15] = true, [25] = true, [39] = true},  -- Rickety Magic Broom  --  itemid
---	[42692] = {[15] = true, [25] = true, [39] = true, [999] = true},  -- Rickety Magic Broom
 
 	[37011] = {[9] = true, [3] = true, [4] = true, [14] = true, [20] = true, [21] = true, [22] = true, [23] = true, [29] = true, [38] = true},  -- Magic Broom -- itemid
 
 	[33183] = {[16] = true, [20] = true, [38] = true, [4] = true},  -- Magic Broom  --  itemid
---	[42680] = {[16] = true, [20] = true, [38] = true, [999] = true},  -- Magic Broom
-
----	[47977] = {[16] = true, [20] = true, [38] = true, [999] = true},  -- Magic Broom
----	[42681] = {[16] = true, [20] = true, [38] = true, [999] = true},  -- Magic Broom
-
---	[42683] = {[16] = true, [21] = true, [37] = true, [999] = true},  -- Swift Magic Broom
----	[42684] = {[16] = true, [21] = true, [37] = true, [999] = true},  -- Swift Magic Broom
 
 	[33176] = {[12] = true, [22] = true, [36] = true, [9] = true, [4] = true},  -- Flying Broom  --  itemid
---	[42667] = {[12] = true, [22] = true, [36] = true, [9] = true, [999] = true},  -- Flying Broom
----	[42673] = {[12] = true, [22] = true, [36] = true, [9] = true, [999] = true},  -- Flying Broom
 
 	[33182] = {[11] = true, [23] = true, [35] = true, [9] = true, [4] = true},  -- Swift Flying Broom  --  itemid
 	[33184] = {[16] = true, [23] = true, [37] = true, [9] = true, [4] = true, [999] = true},  -- Swift Magic Broom  --  itemid
---	[42668] = {[11] = true, [23] = true, [35] = true, [9] = true, [999] = true},  -- Swift Flying Broom
-
----	[42679] = {[11] = true, [23] = true, [35] = true, [9] = true, [999] = true},  -- Swift Flying Broom
 
 	[32243] = {[12] = true, [22] = true, [36] = true, [9] = true},  -- Tawny Wind Rider
 	[32244] = {[12] = true, [22] = true, [36] = true, [9] = true},  -- Blue Wind Rider
@@ -248,7 +235,7 @@ addonTable.MountDB = {
 	[63635] = {[16] = true, [21] = true, [37] = true},  -- Darkspear Raptor (Swift Darkspear Raptor)
 	[64659] = {[16] = true, [21] = true, [38] = true},  -- Venomhide Ravasaur
 	[65644] = {[16] = true, [21] = true, [37] = true},  -- Swift Purple Raptor
-	
+
 	[43688] = {[11] = true, [21] = true, [37] = true},  -- Amani War Bear
 	[51412] = {[16] = true, [21] = true, [37] = true},  -- Big Battle Bear
 	[54753] = {[16] = true, [21] = true, [37] = true},  -- White Polar Bear Mount
@@ -259,8 +246,7 @@ addonTable.MountDB = {
 	[60116] = {[16] = true, [21] = true, [37] = true},  -- Armored Brown Bear
 	[60118] = {[16] = true, [21] = true, [37] = true},  -- Black War Bear
 	[60119] = {[16] = true, [21] = true, [37] = true},  -- Black War Bear
-	--[64987] = {[14] = true, [20] = true, [21] = true, [29] = true, [38] = true, [999] = true},  --Big Blizzard Bear [PH] - ticket 211
-	
+
 	[8394] = {[14] = true, [20] = true, [38] = true},  -- Striped Frostsaber
 	[10789] = {[14] = true, [20] = true, [38] = true},  -- Spotted Frostsaber
 	[10793] = {[14] = true, [20] = true, [38] = true},  -- Striped Nightsaber
@@ -371,7 +357,6 @@ addonTable.MountDB = {
 	[55531] = {[17] = true, [21] = true, [37] = true, [2] = true},  -- Mechano-hog
 	[60424] = {[17] = true, [21] = true, [37] = true, [2] = true},  -- Mekgineer's Chopper
 	[63796] = {[11] = true, [24] = true, [35] = true, [9] = true},  -- Mimiron's Head
-	
 
 	[61309] = {[11] = true, [23] = true, [49] = true, [9] = true, [35] = true},  -- Magnificent Flying Carpet
 	[61442] = {[11] = true, [47] = true, [9] = true, [23] = true, [35] = true},  -- Swift Mooncloth Carpet
@@ -379,7 +364,6 @@ addonTable.MountDB = {
 	[61446] = {[11] = true, [47] = true, [9] = true, [23] = true, [35] = true},  -- Swift Spellfire Carpet
 	[61451] = {[12] = true, [48] = true, [9] = true, [22] = true, [36] = true},  -- Flying Carpet
 	[75596] = {[11] = true, [23] = true, [9] = true, [49] = true, [35] = true},  -- Frosty Flying Carpet
-	--	[????] = {[11] = true, [47] = true, [9] = true, [23] = true, [35] = true},  -- Swift Flying Carpet   --- item 39303
 
 	[61996] = {[11] = true, [23] = true, [35] = true, [9] = true},  -- Blue Dragonhawk
 	[61997] = {[11] = true, [23] = true, [35] = true, [9] = true},  -- Red Dragonhawk
@@ -388,27 +372,23 @@ addonTable.MountDB = {
 	
 	[74918] = {[16] = true, [21] = true, [37] = true},  -- Wooly White Rhino
 	
-	
---	[62087] = {[5] = true, [15] = true, [21] = true, [39] = true, [53] = true, [999] = true},  -- Aquatic Riding Ray   -- removed from the 3.1 PTR datafiles
-	
--- Below are not used for detection, only used to prevent being reported as unknown mounts
+	-- Below are not used for detection, only used to prevent being reported as unknown mounts
 	[40120] = {[9] = true, [11] = true, [23] = true},  -- GOGO_DRUID_FAST_FLIGHTFORM
 	[33943] = {[9] = true, [11] = true, [22] = true},  -- GOGO_DRUID_FLIGHTFORM
 	[783] = {[28] = true}, -- GOGO_DRUID_TRAVELFORM
 	[2645] = {[28] = true}, -- GOGO_SHAMAN_GHOSTWOLF
-	
 }
-	
+
 addonTable.MountsItems = {
-	[1] = 33189,
-	[2] = 37011,
-	[3] = 33183,
-	[4] = 33176,
-	[5] = 33182,
-	[6] = 33184,
-	[7] = 44229,
-	[8] = 44221,
-	[9] = 37859,
-	[10] = 37860,
-	[11] = 37815,
+	33189, -- Rickety Magic Broom
+	37011, -- Magic Broom
+	33183, -- Old Magic Broom
+	33176, -- Flying Broom
+	33182, -- Swift Flying Broom
+	33184, -- Swift Magic Broom
+	44229, -- Loaned Wind Rider Reins
+	44221, -- Loaned Gryphon Reins
+	37859, -- Amber Essence
+	37860, -- Ruby Essence
+	37815, -- Emerald Essence
 }

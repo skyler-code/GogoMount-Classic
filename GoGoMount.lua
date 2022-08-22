@@ -2,7 +2,8 @@ local addonName, addonTable = ...
 
 local GoGoMount = LibStub("AceAddon-3.0"):NewAddon(addonName, "AceConsole-3.0", "AceEvent-3.0")
 
-local GoGo_Panel = CreateFrame("FRAME")
+local tinsert, tremove = tinsert, tremove
+local C_Map = C_Map
 
 local function GetZoneNames(mapId)
 	local zoneStr = ""
@@ -288,7 +289,7 @@ function GoGo_ChooseMount()
 		GoGo_DebugAddLine("GoGo_ChooseMount: " .. GOGO_SKILL_RIDING .. " = "..addonTable.RidingLevel)
 	end
 
-	if (table.getn(mounts) == 0) then
+	if (#mounts == 0) then
 		if GoGo_Prefs[addonTable.Player.Zone] then
 			GoGo_FilteredMounts = GoGo_Prefs[addonTable.Player.Zone]
 			GoGo_DisableUnknownMountNotice = true
@@ -298,7 +299,7 @@ function GoGo_ChooseMount()
 		GoGo_DebugAddLine("GoGo_ChooseMount: Checked for zone favorites.")
 	end
 
-	if (table.getn(mounts) == 0) and not GoGo_FilteredMounts or (table.getn(GoGo_FilteredMounts) == 0) then
+	if (#mounts == 0) and not GoGo_FilteredMounts or (#GoGo_FilteredMounts == 0) then
 		if GoGo_Prefs.GlobalPrefMounts then
 			GoGo_FilteredMounts = GoGo_Prefs.GlobalPrefMounts
 			GoGo_DisableUnknownMountNotice = true
@@ -308,7 +309,7 @@ function GoGo_ChooseMount()
 		end
 	end
 
-	if (table.getn(mounts) == 0) and not GoGo_FilteredMounts or (table.getn(GoGo_FilteredMounts) == 0) then
+	if (#mounts == 0) and not GoGo_FilteredMounts or (#GoGo_FilteredMounts == 0) then
 		if addonTable.Debug then
 			GoGo_DebugAddLine("GoGo_ChooseMount: Checking for spell and item mounts.")
 		end
@@ -316,7 +317,7 @@ function GoGo_ChooseMount()
 		GoGo_BuildMountItemList()
 		GoGo_BuildMountList()
 		GoGo_FilteredMounts = addonTable.MountList
-		if not GoGo_FilteredMounts or (table.getn(GoGo_FilteredMounts) == 0) then
+		if not GoGo_FilteredMounts or (#GoGo_FilteredMounts == 0) then
 			if addonTable.Player.Class == "SHAMAN" then
 				if addonTable.Debug then
 					GoGo_DebugAddLine("GoGo_ChooseMount: No mounts found. Forcing shaman shape form.")
@@ -388,14 +389,14 @@ function GoGo_ChooseMount()
 		GoGo_FilteredMounts = GoGo_FilterMountsIn(GoGo_FilteredMounts, 2) or {}
 	end
 
-	if (table.getn(mounts) == 0) and IsSwimming() then
+	if (#mounts == 0) and IsSwimming() then
 		if addonTable.Debug then
 			GoGo_DebugAddLine("GoGo_ChooseMount: Looking for water speed increase mounts since we're in water.")
 		end
 		mounts = GoGo_FilterMountsIn(GoGo_FilteredMounts, 5) or {}
 	end
 	
-	if (table.getn(mounts) == 0) and GoGo_CanFly() and not addonTable.SkipFlyingMount then
+	if (#mounts == 0) and GoGo_CanFly() and not addonTable.SkipFlyingMount then
 		if addonTable.Debug then
 			GoGo_DebugAddLine("GoGo_ChooseMount: Looking for flying mounts since we past flight checks.")
 		end
@@ -420,7 +421,7 @@ function GoGo_ChooseMount()
 			return GoGo_InBook(GOGO_SPELLS["DRUID"])
 		end
 	
-		if (table.getn(mounts) == 0) then
+		if (#mounts == 0) then
 			GoGo_TempMounts = GoGo_FilterMountsIn(GoGo_FilteredMounts, 9)
 			mounts = GoGo_FilterMountsIn(GoGo_TempMounts, 24)
 		end
@@ -430,18 +431,18 @@ function GoGo_ChooseMount()
 				GoGo_TempMountsA = GoGo_FilterMountsOut(GoGo_TempMountsA, 29)
 			end
 			if GoGo_TempMountsA then
-				for counter = 1, table.getn(GoGo_TempMountsA) do
-					table.insert(mounts, GoGo_TempMountsA[counter])
+				for k, v in ipairs(GoGo_TempMountsA) do
+					tinsert(mounts, v)
 				end
 			end
 			local GoGo_TempMountsA = GoGo_FilterMountsIn(GoGo_TempMounts, 26)
 			if GoGo_TempMountsA then
-				for counter = 1, table.getn(GoGo_TempMountsA) do
-					table.insert(mounts, GoGo_TempMountsA[counter])
+				for k, v in ipairs(GoGo_TempMountsA) do
+					tinsert(mounts, v)
 				end
 			end
 		end
-		if (table.getn(mounts) == 0) then
+		if #mounts == 0 then
 			GoGo_TempMountsA = GoGo_FilterMountsIn(GoGo_TempMounts, 23)
 			if addonTable.RidingLevel <= 299 then
 				mounts = GoGo_FilterMountsOut(GoGo_TempMountsA, 29)
@@ -451,39 +452,39 @@ function GoGo_ChooseMount()
 		end
 
 		-- no epic flyers found - add druid swift flight if available
-		if (table.getn(mounts) == 0 and (addonTable.Player.Class == "Druid") and (GoGo_InBook(addonTable.Localize.FastFlightForm))) then
-			table.insert(mounts, addonTable.Localize.FastFlightForm)
+		if (#mounts == 0 and (addonTable.Player.Class == "Druid") and (GoGo_InBook(addonTable.Localize.FastFlightForm))) then
+			tinsert(mounts, addonTable.Localize.FastFlightForm)
 		end
 
-		if (table.getn(mounts) == 0) then
+		if #mounts == 0 then
 			GoGo_TempMounts = GoGo_FilterMountsIn(GoGo_FilteredMounts, 9)
 			mounts = GoGo_FilterMountsIn(GoGo_TempMounts, 22)
 		end
 
 		-- no slow flying mounts found - add druid flight if available
-		if (table.getn(mounts) == 0 and (addonTable.Player.Class == "Druid") and (GoGo_InBook(addonTable.Localize.FlightForm))) then
-			table.insert(mounts, addonTable.Localize.FlightForm)
+		if (#mounts == 0 and (addonTable.Player.Class == "Druid") and (GoGo_InBook(addonTable.Localize.FlightForm))) then
+			tinsert(mounts, addonTable.Localize.FlightForm)
 		end
 	end
 	
-	if (table.getn(GoGo_FilteredMounts) >= 1) then
+	if (#GoGo_FilteredMounts >= 1) then
 		--GoGo_FilteredMounts = GoGo_FilterMountsOut(GoGo_FilteredMounts, 1)
 		GoGo_FilteredMounts = GoGo_FilterMountsOut(GoGo_FilteredMounts, 36)
 		GoGo_FilteredMounts = GoGo_FilterMountsOut(GoGo_FilteredMounts, 35)
 	end
 
-	if (table.getn(mounts) == 0) and (table.getn(GoGo_FilteredMounts) >= 1) then  -- no flying mounts selected yet - try to use loaned mounts
+	if (#mounts == 0) and (#GoGo_FilteredMounts >= 1) then  -- no flying mounts selected yet - try to use loaned mounts
 		GoGo_TempMounts = GoGo_FilterMountsIn(GoGo_FilteredMounts, 52) or {}
-		if (table.getn(GoGo_TempMounts) >= 1) and (addonTable.Player.Zone == addonTable.Localize.Zone.SholazarBasin or addonTable.Player.Zone == addonTable.Localize.Zone.TheStormPeaks or addonTable.Player.Zone == GOGO_ZONE_ICECROWN) then
+		if (#GoGo_TempMounts >= 1) and (addonTable.Player.Zone == addonTable.Localize.Zone.SholazarBasin or addonTable.Player.Zone == addonTable.Localize.Zone.TheStormPeaks or addonTable.Player.Zone == GOGO_ZONE_ICECROWN) then
 			mounts = GoGo_FilterMountsIn(GoGo_FilteredMounts, 52)
 		end
 		GoGo_FilteredMounts = GoGo_FilterMountsOut(GoGo_FilteredMounts, 52)
 	end
 	
 	-- Set the oculus mounts as the only mounts available if we're in the oculus, not skiping flying and have them in inventory
-	if (table.getn(mounts) == 0) and (table.getn(GoGo_FilteredMounts) >= 1) and (addonTable.Player.Zone == GOGO_ZONE_THEOCULUS) and not addonTable.SkipFlyingMount then
+	if #mounts == 0 and (#GoGo_FilteredMounts >= 1) and (addonTable.Player.Zone == GOGO_ZONE_THEOCULUS) and not addonTable.SkipFlyingMount then
 		GoGo_TempMounts = GoGo_FilterMountsIn(GoGo_FilteredMounts, 54) or {}
-		if (table.getn(GoGo_TempMounts) >= 1) then
+		if #GoGo_TempMounts >= 1 then
 			mounts = GoGo_TempMounts
 			if addonTable.Debug then
 				GoGo_DebugAddLine("GoGo_ChooseMount: In the Oculus, Oculus only mount found, using.")
@@ -501,7 +502,7 @@ function GoGo_ChooseMount()
 	end
 	
 	-- Select ground mounts
-	if (table.getn(mounts) == 0) and GoGo_CanRide() then
+	if #mounts == 0 and GoGo_CanRide() then
 		if addonTable.Debug then
 			GoGo_DebugAddLine("GoGo_ChooseMount: Looking for ground mounts since we can't fly.")
 		end
@@ -520,15 +521,15 @@ function GoGo_ChooseMount()
 		else
 			mounts = GoGo_TempMounts
 		end
-		if (table.getn(mounts) == 0) then
+		if #mounts == 0 then
 			mounts = GoGo_FilterMountsIn(GoGo_FilteredMounts, 20)
 		end
-		if (table.getn(mounts) == 0) then
+		if #mounts == 0 then
 			mounts = GoGo_FilterMountsIn(GoGo_FilteredMounts, 25)
 		end
 	end
 	
-	if table.getn(GoGo_FilteredMounts) >= 1 then
+	if #GoGo_FilteredMounts >= 1 then
 		GoGo_FilteredMounts = GoGo_FilterMountsOut(GoGo_FilteredMounts, 37)
 		GoGo_FilteredMounts = GoGo_FilterMountsOut(GoGo_FilteredMounts, 38)
 		GoGo_FilteredMounts = GoGo_FilterMountsOut(GoGo_FilteredMounts, 21)
@@ -536,9 +537,9 @@ function GoGo_ChooseMount()
 		GoGo_FilteredMounts = GoGo_FilterMountsOut(GoGo_FilteredMounts, 25)
 	end
 	
-	if (table.getn(mounts) == 0) then
+	if #mounts == 0 then
 		if (addonTable.Player.Class == "SHAMAN") and (GoGo_InBook(addonTable.Localize.GhostWolf)) then
-			table.insert(mounts, addonTable.Localize.GhostWolf)
+			tinsert(mounts, addonTable.Localize.GhostWolf)
 		end
 	end
 
@@ -546,19 +547,19 @@ function GoGo_ChooseMount()
 		local filteredMounts = {}
 		for k,mountId in pairs(mounts) do
 			if not GoGo_GlobalIgnoreMountExists(mountId) then
-				table.insert(filteredMounts, mountId)
+				tinsert(filteredMounts, mountId)
 			end
 		end
 		mounts = filteredMounts
 	end
 
-	if (table.getn(mounts) >= 1) then
+	if #mounts >= 1 then
 		if addonTable.Debug then
-			for a = 1, table.getn(mounts) do
+			for a = 1, #mounts do
 				GoGo_DebugAddLine("GoGo_ChooseMount: Found mount " .. mounts[a] .. " - included in random pick.")
 			end
 		end
-		selected = mounts[math.random(table.getn(mounts))]
+		selected = mounts[math.random(#mounts)]
 		if type(selected) == "string" then
 			if addonTable.Debug then
 				GoGo_DebugAddLine("GoGo_ChooseMount: Selected string " .. selected)
@@ -571,18 +572,12 @@ function GoGo_ChooseMount()
 	end
 end
 
----------
 function GoGo_FilterMountsOut(PlayerMounts, FilterID)
----------
 	local GoGo_FilteringMounts = {}
-	if table.getn(PlayerMounts) == 0 then
-		return GoGo_FilteringMounts
-	end
-	for a = 1, table.getn(PlayerMounts) do
-		local MountID = PlayerMounts[a]
+	for k, MountID in pairs(PlayerMounts) do
 		for DBMountID, DBMountData in pairs(addonTable.MountDB) do
 			if (DBMountID == MountID) and not DBMountData[FilterID] then
-				table.insert(GoGo_FilteringMounts, MountID)
+				tinsert(GoGo_FilteringMounts, MountID)
 			elseif not addonTable.MountDB[MountID] then
 				GoGo_Prefs.UnknownMounts[MountID] = true
 				if not GoGo_Prefs.DisableMountNotice and not GoGo_DisableUnknownMountNotice then
@@ -599,14 +594,10 @@ end
 function GoGo_FilterMountsIn(PlayerMounts, FilterID)
 ---------
 	local GoGo_FilteringMounts = {}
-	if table.getn(PlayerMounts) == 0 then
-		return GoGo_FilteringMounts
-	end
-	for a = 1, table.getn(PlayerMounts) do
-		local MountID = PlayerMounts[a]
+	for k, MountID in pairs(PlayerMounts) do
 		for DBMountID, DBMountData in pairs(addonTable.MountDB) do
 			if (DBMountID == MountID) and DBMountData[FilterID] then
-				table.insert(GoGo_FilteringMounts, MountID)
+				tinsert(GoGo_FilteringMounts, MountID)
 			elseif not addonTable.MountDB[MountID] then
 				GoGo_Prefs.UnknownMounts[MountID] = true
 				if not GoGo_Prefs.DisableMountNotice and not GoGo_DisableUnknownMountNotice then
@@ -640,58 +631,37 @@ function GoGo_Dismount(button)
 	return true
 end
 
-function GoGo_InCompanions(item)
-	for slot = 1, GetNumCompanions("MOUNT") do
-		local _, _, spellID = GetCompanionInfo("MOUNT", slot)
-		if spellID and string.find(item, spellID) then
-			if addonTable.Debug then 
-				GoGo_DebugAddLine("GoGo_InCompanions: Found mount name  " .. GetSpellInfo(spellID) .. " in mount list.")
-			end
-			return GetSpellInfo(spellID)
-		end
-	end
-end
-
 function GoGo_BuildMountList()
 	addonTable.MountList = {}
-	if (table.getn(addonTable.MountSpellList) > 0) then
-		for a=1, table.getn(addonTable.MountSpellList) do
-			table.insert(addonTable.MountList, addonTable.MountSpellList[a])
-		end
+	for _, v in pairs(addonTable.MountSpellList) do
+		tinsert(addonTable.MountList, v)
 	end
-	
-	if (table.getn(addonTable.MountItemList) > 0) then
-		for a=1, table.getn(addonTable.MountItemList) do
-			table.insert(addonTable.MountList, addonTable.MountItemList[a])
-		end
+	for _, v in pairs(addonTable.MountItemList) do
+		tinsert(addonTable.MountList, v)
 	end
-
 	return addonTable.MountList
 end 
 
 function GoGo_BuildMountSpellList()
 	addonTable.MountSpellList = {}
-	if (GetNumCompanions("MOUNT") >= 1) then
-		for slot = 1, GetNumCompanions("MOUNT"),1 do
-			local _, _, SpellID = GetCompanionInfo("MOUNT", slot)
-			if addonTable.Debug then 
-				GoGo_DebugAddLine("GoGo_BuildMountSpellList: Found mount spell ID " .. SpellID .. " at slot " .. slot .. " and added to known mount list.")
-			end
-			table.insert(addonTable.MountSpellList, SpellID)
+	for slot = 1, GetNumCompanions("MOUNT"),1 do
+		local _, _, SpellID = GetCompanionInfo("MOUNT", slot)
+		if addonTable.Debug then 
+			GoGo_DebugAddLine("GoGo_BuildMountSpellList: Found mount spell ID " .. SpellID .. " at slot " .. slot .. " and added to known mount list.")
 		end
+		tinsert(addonTable.MountSpellList, SpellID)
 	end
 	return addonTable.MountSpellList
 end
 
 function GoGo_BuildMountItemList()
 	addonTable.MountItemList = {}
-	for a = 1, table.getn(addonTable.MountsItems) do
-		local MountID = addonTable.MountsItems[a]
+	for k, MountID in ipairs(addonTable.MountsItems) do
 		if GoGo_InBags(MountID) then
 			if addonTable.Debug then 
 				GoGo_DebugAddLine("GoGo_BuildMountItemList: Found mount item ID " .. MountID .. " in a bag and added to known mount list.")
 			end
-			table.insert(addonTable.MountItemList, MountID)
+			tinsert(addonTable.MountItemList, MountID)
 		end
 	end
 	return addonTable.MountItemList
@@ -747,7 +717,7 @@ function GoGo_IsShifted()
 		GoGo_DebugAddLine("GoGo_IsShifted:  GoGo_IsShifted starting")
 	end
 	for i = 1, GetNumShapeshiftForms() do
-		local _, active, castable, spellID = GetShapeshiftFormInfo(i)
+		local _, active, _, spellID = GetShapeshiftFormInfo(i)
 		if active then
 			local name = GetSpellInfo(spellID)
 			if addonTable.Debug then
@@ -794,30 +764,30 @@ function GoGo_AddPrefMount(spell)
 	if not GoGo_Prefs.GlobalPrefMount then
 		addonTable.Player.Zone = GetRealZoneText()
 		if not GoGo_Prefs[addonTable.Player.Zone] then GoGo_Prefs[addonTable.Player.Zone] = {} end
-		table.insert(GoGo_Prefs[addonTable.Player.Zone], spell)
-		if table.getn(GoGo_Prefs[addonTable.Player.Zone]) > 1 then
+		tinsert(GoGo_Prefs[addonTable.Player.Zone], spell)
+		if #GoGo_Prefs[addonTable.Player.Zone] > 1 then
 			local i = 2
 			repeat
 				if GoGo_Prefs[addonTable.Player.Zone][i] == GoGo_Prefs[addonTable.Player.Zone][i - 1] then
-					table.remove(GoGo_Prefs[addonTable.Player.Zone], i)
+					tremove(GoGo_Prefs[addonTable.Player.Zone], i)
 				else
 					i = i + 1
 				end
-			until i > table.getn(GoGo_Prefs[addonTable.Player.Zone])
+			until i > #GoGo_Prefs[addonTable.Player.Zone]
 		end
 	else
 		if not GoGo_Prefs.GlobalPrefMounts then GoGo_Prefs.GlobalPrefMounts = {} end
 		if not GoGo_GlobalPrefMountExists(spell) then
-			table.insert(GoGo_Prefs.GlobalPrefMounts, spell)
-			if table.getn(GoGo_Prefs.GlobalPrefMounts) > 1 then
+			tinsert(GoGo_Prefs.GlobalPrefMounts, spell)
+			if #GoGo_Prefs.GlobalPrefMounts > 1 then
 				local i = 2
 				repeat
 					if GoGo_Prefs.GlobalPrefMounts[i] == GoGo_Prefs.GlobalPrefMounts[i - 1] then
-						table.remove(GoGo_Prefs.GlobalPrefMounts, i)
+						tremove(GoGo_Prefs.GlobalPrefMounts, i)
 					else
 						i = i + 1
 					end
-				until i > table.getn(GoGo_Prefs.GlobalPrefMounts)
+				until i > #GoGo_Prefs.GlobalPrefMounts
 			end
 		end
 	end
@@ -829,16 +799,16 @@ function GoGo_AddIgnoreMount(spell)
 		end
 		if not GoGo_Prefs.GlobalIgnoreMounts then GoGo_Prefs.GlobalIgnoreMounts = {} end
 		if not GoGo_GlobalIgnoreMountExists(spell) then
-			table.insert(GoGo_Prefs.GlobalIgnoreMounts, spell)
-			if table.getn(GoGo_Prefs.GlobalIgnoreMounts) > 1 then
+			tinsert(GoGo_Prefs.GlobalIgnoreMounts, spell)
+			if #GoGo_Prefs.GlobalIgnoreMounts > 1 then
 				local i = 2
 				repeat
 					if GoGo_Prefs.GlobalIgnoreMounts[i] == GoGo_Prefs.GlobalIgnoreMounts[i - 1] then
-						table.remove(GoGo_Prefs.GlobalIgnoreMounts, i)
+						tremove(GoGo_Prefs.GlobalIgnoreMounts, i)
 					else
 						i = i + 1
 					end
-				until i > table.getn(GoGo_Prefs.GlobalIgnoreMounts)
+				until i > #GoGo_Prefs.GlobalIgnoreMounts
 			end
 		end
 end
@@ -848,18 +818,18 @@ function GoGo_GetIDName(itemid)
 	local ItemName = ""
 	if type(itemid) == "number" then
 		local GoGo_TempMount = {}
-		table.insert(GoGo_TempMount, itemid)
-		if (table.getn(GoGo_FilterMountsIn(GoGo_TempMount, 4)) == 1) then
+		tinsert(GoGo_TempMount, itemid)
+		if (#GoGo_FilterMountsIn(GoGo_TempMount, 4) == 1) then
 			return GetItemInfo(itemid) or "Unknown Mount"
 		else
 			return GetSpellInfo(itemid) or "Unknown Mount"
 		end
 	elseif type(itemid) == "table" then
-		for a=1, table.getn(itemid) do
+		for a=1, itemid do
 			tempname = itemid[a]
 			local GoGo_TempTable = {}
-			table.insert(GoGo_TempTable, tempname)
-			if (table.getn(GoGo_FilterMountsIn(GoGo_TempTable, 4)) == 1) then
+			tinsert(GoGo_TempTable, tempname)
+			if (#GoGo_FilterMountsIn(GoGo_TempTable, 4) == 1) then
 				if addonTable.Debug then
 					GoGo_DebugAddLine("GoGo_GetIDName: GetItemID for " .. tempname .. GetItemInfo(tempname))
 				end
@@ -898,9 +868,7 @@ function GoGo_GetTalentInfo(talentname)
 	return 0,0
 end
 
----------
 function GoGo_FillButton(button, mount)
----------
 	if mount then
 		if addonTable.Debug then 
 			GoGo_DebugAddLine("GoGo_FillButton: Casting " .. mount)
@@ -911,7 +879,6 @@ function GoGo_FillButton(button, mount)
 	end
 end
 
----------
 function GoGo_CheckBindings()
 	for binding, button in pairs({GOGOBINDING = GoGoButton1, GOGOBINDING2 = GoGoButton2, GOGOBINDING3 = GoGoButton3}) do
 		ClearOverrideBindings(button)
@@ -925,9 +892,7 @@ function GoGo_CheckBindings()
 	end
 end
 
----------
 function GoGo_CanFly()
----------
 	addonTable.Player.Zone = GetRealZoneText()
 	addonTable.Player.SubZone = GetSubZoneText()
 
@@ -1009,9 +974,7 @@ function GoGo_CanFly()
 	return true
 end
 
----------
 function GoGo_CanRide()
----------
 	local level = UnitLevel("player")
 	if level >= 20 then
 		if addonTable.Debug then
@@ -1021,33 +984,17 @@ function GoGo_CanRide()
 	end
 end
 
----------
 function GoGo_CheckFor310()  -- checks to see if any existing 310% mounts exist to increase the speed of [6] mounts
----------
-	local loop
-	local MountID
 	if addonTable.Debug then
 		GoGo_DebugAddLine("GoGo_CheckFor310: Function executed.")
 	end
 
 	local Find310Mounts = GoGo_FilterMountsIn(addonTable.MountList,24)
-	for loop=1, table.getn(Find310Mounts) do
-		MountID = Find310Mounts[loop]
+	Find310Mounts = GoGo_FilterMountsIn(addonTable.MountList,6)
+	for k, MountID in ipairs(Find310Mounts) do
+		addonTable.MountDB[MountID][24] = true
 		if addonTable.Debug then
-			GoGo_DebugAddLine("GoGo_CheckFor310: Mount ID " .. MountID .. " found as 310% flying.")
-		end
-	end
-	if (table.getn(Find310Mounts) > 0) then
-		Find310Mounts = GoGo_FilterMountsIn(addonTable.MountList,6)
-		if table.getn(Find310Mounts) then
-			for loop=1, table.getn(Find310Mounts) do
-				MountID = Find310Mounts[loop]
-				addonTable.MountDB[MountID][24] = true
-				if addonTable.Debug then
-					GoGo_DebugAddLine("GoGo_CheckFor310: Mount ID " .. MountID .. " added as 310% flying.")
-				end
-
-			end
+			GoGo_DebugAddLine("GoGo_CheckFor310: Mount ID " .. MountID .. " added as 310% flying.")
 		end
 	end
 end
