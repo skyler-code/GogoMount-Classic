@@ -13,13 +13,13 @@ local savedDBDefaults = {
 	char = {
 		enabled = true,
         autodismount = true,
-        DisableMountNotice = false,
 		genericfastflyer = false,
 		DruidClickForm = true,
-		DruidFlightForm = false,
+		DruidFlightForm = true,
 		GlobalPrefMount = false,
 		FilteredZones = {},
 		GlobalPrefMounts = {},
+		GlobalIgnoreMounts = {},
 	},
 }
 
@@ -125,7 +125,7 @@ end
 function GoGoMount:VARIABLES_LOADED()
 	GoGo_DebugLog = {}
 	addonTable.TestVersion = false
-	addonTable.Debug = true
+	addonTable.Debug = false
 	_, addonTable.Player.Class = UnitClass("player")
 	if (addonTable.Player.Class == "DRUID") then
 		addonTable.Druid = {}
@@ -345,7 +345,6 @@ function GoGoMount:ChooseMount()
 	if (#mounts == 0) then
 		if self.db.char.FilteredZones[addonTable.Player.Zone] then
 			GoGo_FilteredMounts = self.db.char.FilteredZones[addonTable.Player.Zone]
-			GoGo_DisableUnknownMountNotice = true
 		end
 	end
 	if addonTable.Debug then
@@ -353,9 +352,8 @@ function GoGoMount:ChooseMount()
 	end
 
 	if (#mounts == 0) and not GoGo_FilteredMounts or (#GoGo_FilteredMounts == 0) then
-		if GoGo_Prefs.GlobalPrefMounts then
-			GoGo_FilteredMounts = GoGo_Prefs.GlobalPrefMounts
-			GoGo_DisableUnknownMountNotice = true
+		if self.db.char.GlobalPrefMounts then
+			GoGo_FilteredMounts = self.db.char.GlobalPrefMounts
 		end
 		if addonTable.Debug then
 			self:DebugAddLine("GoGo_ChooseMount: Checked for global favorites.")
@@ -467,7 +465,7 @@ function GoGoMount:ChooseMount()
 
 		-- Druid stuff... 
 		-- Use flight forms if preferred
-		if addonTable.Player.Class == "DRUID" and (SpellInBook(addonTable.Localize.FastFlightForm) or SpellInBook(addonTable.Localize.FlightForm)) and GoGo_Prefs.DruidFlightForm then
+		if addonTable.Player.Class == "DRUID" and (SpellInBook(addonTable.Localize.FastFlightForm) or SpellInBook(addonTable.Localize.FlightForm)) and self.db.char.DruidFlightForm then
 			if addonTable.Debug then
 				self:DebugAddLine("GoGo_ChooseMount: Druid with preferred flight forms option enabled.  Using flight form.")
 			end
@@ -478,7 +476,7 @@ function GoGoMount:ChooseMount()
 			GoGo_TempMounts = self:FilterMountsIn(GoGo_FilteredMounts, 9)
 			mounts = self:FilterMountsIn(GoGo_TempMounts, 24)
 		end
-		if GoGo_Prefs.genericfastflyer then
+		if self.db.char.genericfastflyer then
 			local GoGo_TempMountsA = self:FilterMountsIn(GoGo_TempMounts, 23)
 			if addonTable.RidingLevel <= 299 then
 				GoGo_TempMountsA = self:FilterMountsOut(GoGo_TempMountsA, 29)
@@ -596,7 +594,7 @@ function GoGoMount:ChooseMount()
 		end
 	end
 
-	if GoGo_Prefs.GlobalIgnoreMounts and #GoGo_Prefs.GlobalIgnoreMounts > 0 then
+	if self.db.char.GlobalIgnoreMounts and #self.db.char.GlobalIgnoreMounts > 0 then
 		local filteredMounts = {}
 		for k,mountId in pairs(mounts) do
 			if not self:GlobalIgnoreMountExists(mountId) then
@@ -631,12 +629,6 @@ function GoGoMount:FilterMountsOut(PlayerMounts, FilterID)
 		for DBMountID, DBMountData in pairs(addonTable.MountDB) do
 			if (DBMountID == MountID) and not DBMountData[FilterID] then
 				tinsert(GoGo_FilteringMounts, MountID)
-			elseif not addonTable.MountDB[MountID] then
-				GoGo_Prefs.UnknownMounts[MountID] = true
-				if not GoGo_Prefs.DisableMountNotice and not GoGo_DisableUnknownMountNotice then
-					GoGo_DisableUnknownMountNotice = true
-					self:Msg("UnknownMount")
-				end
 			end
 		end
 	end
@@ -651,12 +643,6 @@ function GoGoMount:FilterMountsIn(PlayerMounts, FilterID)
 		for DBMountID, DBMountData in pairs(addonTable.MountDB) do
 			if (DBMountID == MountID) and DBMountData[FilterID] then
 				tinsert(GoGo_FilteringMounts, MountID)
-			elseif not addonTable.MountDB[MountID] then
-				GoGo_Prefs.UnknownMounts[MountID] = true
-				if not GoGo_Prefs.DisableMountNotice and not GoGo_DisableUnknownMountNotice then
-					GoGo_DisableUnknownMountNotice = true
-					self:Msg("UnknownMount")
-				end
 			end
 		end
 	end
@@ -670,8 +656,8 @@ function GoGoMount:Dismount(button)
 		VehicleExit()
 	elseif addonTable.Player.Class == "DRUID" then
 		if self:IsShifted() and button then
-			if GoGo_Prefs.DruidClickForm and not IsFlying() then
-				self:FillButton(button, GoGo_GetMount())
+			if self.db.char.DruidClickForm and not IsFlying() then
+				self:FillButton(button, self:GetMount())
 			else
 				self:FillButton(button, self:IsShifted())
 			end
@@ -755,7 +741,7 @@ function GoGoMount:IsShifted()
 end
 
 function GoGoMount:GlobalIgnoreMountExists(spell)
-	for k, v in pairs(GoGo_Prefs.GlobalIgnoreMounts) do
+	for k, v in pairs(self.db.char.GlobalIgnoreMounts) do
 		if v == spell then
 			return true
 		end
@@ -763,7 +749,7 @@ function GoGoMount:GlobalIgnoreMountExists(spell)
 end
 
 function GoGoMount:GlobalPrefMountExists(spell)
-	for k, v in pairs(GoGo_Prefs.GlobalPrefMounts) do
+	for k, v in pairs(self.db.char.GlobalPrefMounts) do
 		if v == spell then
 			return true
 		end
@@ -775,33 +761,33 @@ function GoGoMount:AddPrefMount(spell)
 		self:DebugAddLine("GoGo_AddPrefMount: Preference " .. spell)
 	end
 
-	if not GoGo_Prefs.GlobalPrefMount then
+	if not self.db.char.GlobalPrefMount then
 		addonTable.Player.Zone = GetRealZoneText()
-		if not GoGo_Prefs[addonTable.Player.Zone] then GoGo_Prefs[addonTable.Player.Zone] = {} end
-		tinsert(GoGo_Prefs[addonTable.Player.Zone], spell)
-		if #GoGo_Prefs[addonTable.Player.Zone] > 1 then
+		if not self.db.char.FilteredZones[addonTable.Player.Zone] then self.db.char.FilteredZones[addonTable.Player.Zone] = {} end
+		tinsert(self.db.char.FilteredZones[addonTable.Player.Zone], spell)
+		if #self.db.char.FilteredZones[addonTable.Player.Zone] > 1 then
 			local i = 2
 			repeat
-				if GoGo_Prefs[addonTable.Player.Zone][i] == GoGo_Prefs[addonTable.Player.Zone][i - 1] then
-					tremove(GoGo_Prefs[addonTable.Player.Zone], i)
+				if self.db.char.FilteredZones[addonTable.Player.Zone][i] == self.db.char.FilteredZones[addonTable.Player.Zone][i - 1] then
+					tremove(self.db.char.FilteredZones[addonTable.Player.Zone], i)
 				else
 					i = i + 1
 				end
-			until i > #GoGo_Prefs[addonTable.Player.Zone]
+			until i > #self.db.char.FilteredZones[addonTable.Player.Zone]
 		end
 	else
-		if not GoGo_Prefs.GlobalPrefMounts then GoGo_Prefs.GlobalPrefMounts = {} end
+		if not self.db.char.GlobalPrefMounts then self.db.char.GlobalPrefMounts = {} end
 		if not self:GlobalPrefMountExists(spell) then
-			tinsert(GoGo_Prefs.GlobalPrefMounts, spell)
-			if #GoGo_Prefs.GlobalPrefMounts > 1 then
+			tinsert(self.db.char.GlobalPrefMounts, spell)
+			if #self.db.char.GlobalPrefMounts > 1 then
 				local i = 2
 				repeat
-					if GoGo_Prefs.GlobalPrefMounts[i] == GoGo_Prefs.GlobalPrefMounts[i - 1] then
-						tremove(GoGo_Prefs.GlobalPrefMounts, i)
+					if self.db.char.GlobalPrefMounts[i] == self.db.char.GlobalPrefMounts[i - 1] then
+						tremove(self.db.char.GlobalPrefMounts, i)
 					else
 						i = i + 1
 					end
-				until i > #GoGo_Prefs.GlobalPrefMounts
+				until i > #self.db.char.GlobalPrefMounts
 			end
 		end
 	end
@@ -811,18 +797,18 @@ function GoGoMount:AddIgnoreMount(spell)
 		if addonTable.Debug then 
 			self:DebugAddLine("GoGo_AddPrefMount: Preference " .. spell)
 		end
-		if not GoGo_Prefs.GlobalIgnoreMounts then GoGo_Prefs.GlobalIgnoreMounts = {} end
+		if not self.db.char.GlobalIgnoreMounts then self.db.char.GlobalIgnoreMounts = {} end
 		if not self:GlobalIgnoreMountExists(spell) then
-			tinsert(GoGo_Prefs.GlobalIgnoreMounts, spell)
-			if #GoGo_Prefs.GlobalIgnoreMounts > 1 then
+			tinsert(self.db.char.GlobalIgnoreMounts, spell)
+			if #self.db.char.GlobalIgnoreMounts > 1 then
 				local i = 2
 				repeat
-					if GoGo_Prefs.GlobalIgnoreMounts[i] == GoGo_Prefs.GlobalIgnoreMounts[i - 1] then
-						tremove(GoGo_Prefs.GlobalIgnoreMounts, i)
+					if self.db.char.GlobalIgnoreMounts[i] == self.db.char.GlobalIgnoreMounts[i - 1] then
+						tremove(self.db.char.GlobalIgnoreMounts, i)
 					else
 						i = i + 1
 					end
-				until i > #GoGo_Prefs.GlobalIgnoreMounts
+				until i > #self.db.char.GlobalIgnoreMounts
 			end
 		end
 end
@@ -1045,14 +1031,14 @@ GOGO_COMMANDS = {
 	end,
 	["clear"] = function(self)
 		if self.db.char.GlobalPrefMount then
-			GoGo_Prefs.GlobalPrefMounts = nil
+			self.db.char.GlobalPrefMounts = nil
 			if not InCombatLockdown() then
 				for i, button in ipairs({GoGoButton, GoGoButton2}) do
 					self:FillButton(button)
 				end
 			end
 		else
-			GoGo_Prefs[addonTable.Player.Zone] = nil
+			self.db.char.FilteredZones[addonTable.Player.Zone] = nil
 			if not InCombatLockdown() then
 				for i, button in ipairs({GoGoButton, GoGoButton2}) do
 					self:FillButton(button)
@@ -1060,10 +1046,6 @@ GOGO_COMMANDS = {
 			end
 		end
 		self:Msg("pref")
-	end,
-	["mountnotice"] = function(self)
-		self.db.char.DisableMountNotice = not self.db.char.DisableMountNotice
-		self:Msg("mountnotice")
 	end,
 	["druidclickform"] = function(self)
 		self.db.char.DruidClickForm = not self.db.char.DruidClickForm
@@ -1081,7 +1063,7 @@ GOGO_COMMANDS = {
 
 GOGO_MESSAGES = {
 	["auto"] = function(self)
-		if GoGo_Prefs.autodismount then
+		if self.db.char.autodismount then
 			return "Autodismount active - </gogo auto> to toggle"
 		else
 			return "Autodismount inactive - </gogo auto> to toggle"
@@ -1090,78 +1072,70 @@ GOGO_MESSAGES = {
 	["genericfastflyer"] = function(self)
 		if not self:CanFly() then
 			return
-		elseif GoGo_Prefs.genericfastflyer then
+		elseif self.db.char.genericfastflyer then
 			return "Considering epic flying mounts 310% - 280% speeds the same for random selection - </gogo genericfastflyer> to toggle"
 		else
 			return "Considering epic flying mounts 310% - 280% speeds different for random selection - </gogo genericfastflyer> to toggle"
 		end
 	end,
-	["ignore"] = function()
+	["ignore"] = function(self)
 		local list = ""
-		if GoGo_Prefs.GlobalIgnoreMounts then
-			list = list .. self:GetIDName(GoGo_Prefs.GlobalIgnoreMounts)
+		if self.db.char.GlobalIgnoreMounts then
+			list = list .. self:GetIDName(self.db.char.GlobalIgnoreMounts)
 			msg = "Global Ignore Mounts: "..list
 		else
 			msg =  "Global Ignore Mounts: ?".." - </gogo ignore ItemLink> or </gogo ignore SpellName> to add"
 		end
-		if GoGo_Prefs[addonTable.Player.Zone] then
-			list = list .. self:GetIDName(GoGo_Prefs[addonTable.Player.Zone])
+		if self.db.char.FilteredZones[addonTable.Player.Zone] then
+			list = list .. self:GetIDName(self.db.char.FilteredZones[addonTable.Player.Zone])
 			msg = msg .. "\n" .. addonTable.Player.Zone ..": "..list.." - Disable global mount preferences to change."
 		end
 		return msg
 	end,
-	["pref"] = function()
+	["pref"] = function(self)
 		local msg = ""
-		if not GoGo_Prefs.GlobalPrefMount then
+		if not self.db.char.GlobalPrefMount then
 			local list = ""
-			if GoGo_Prefs[addonTable.Player.Zone] then
-				list = list .. self:GetIDName(GoGo_Prefs[addonTable.Player.Zone])
+			if self.db.char[addonTable.Player.Zone] then
+				list = list .. self:GetIDName(self.db.char[addonTable.Player.Zone])
 				msg = addonTable.Player.Zone..": "..list.." - </gogo clear> to clear"
 			else
 				msg = addonTable.Player.Zone..": ?".." - </gogo ItemLink> or </gogo SpellName> to add"
 			end
-			if GoGo_Prefs.GlobalPrefMounts then
-				list = list .. self:GetIDName(GoGo_Prefs.GlobalPrefMounts)
+			if self.db.char.GlobalPrefMounts then
+				list = list .. self:GetIDName(self.db.char.GlobalPrefMounts)
 				msg = msg .. "\nGlobal Preferred Mounts: "..list.." - Enable global mount preferences to change."
 			end
 			return msg
 		else
 			local list = ""
-			if GoGo_Prefs.GlobalPrefMounts then
-				list = list .. self:GetIDName(GoGo_Prefs.GlobalPrefMounts)
+			if self.db.char.GlobalPrefMounts then
+				list = list .. self:GetIDName(self.db.char.GlobalPrefMounts)
 				msg = "Global Preferred Mounts: "..list.." - </gogo clear> to clear"
 			else
 				msg =  "Global Preferred Mounts: ?".." - </gogo ItemLink> or </gogo SpellName> to add"
 			end
-			if GoGo_Prefs[addonTable.Player.Zone] then
-				list = list .. self:GetIDName(GoGo_Prefs[addonTable.Player.Zone])
+			if self.db.char[addonTable.Player.Zone] then
+				list = list .. self:GetIDName(self.db.char[addonTable.Player.Zone])
 				msg = msg .. "\n" .. addonTable.Player.Zone ..": "..list.." - Disable global mount preferences to change."
 			end
 			return msg
 		end
 	end,
-	["mountnotice"] = function()
-		if GoGo_Prefs.DisableMountNotice then
-			return "Update notices about unknown mounts are disabled - </gogo mountnotice> to toggle"
-		else
-			return "Update notices about unknown mounts are enabled - </gogo mountnotice> to toggle"
-		end
-	end,
-	["druidclickform"] = function()
-		if GoGo_Prefs.DruidClickForm then
+	["druidclickform"] = function(self)
+		if self.db.char.DruidClickForm then
 			return "Single click form changes enabled - </gogo druidclickform> to toggle"
 		else
 			return "Single click form changes disabled - </gogo druidclickform> to toggle"
 		end
 	end,
-	["druidflightform"] = function()
-		if GoGo_Prefs.DruidFlightForm then
+	["druidflightform"] = function(self)
+		if self.db.char.DruidFlightForm then
 			return "Flight Forms always used over flying mounts - </gogo druidflightform> to toggle"
 		else
 			return "Flighing mounts selected, flight forms if moving - </gogo druidflightform> to toggle"
 		end
 	end,
-	["UnknownMount"] = function() return GOGO_STRING_UNKNOWNMOUNTFOUND end,
 	["optiongui"] = function() return "To open the GUI options window - </gogo options>" end,
 }
 
@@ -1186,25 +1160,25 @@ function GoGoMount:GetOptions()
 				type = "toggle",
 				order = 1,
 				width = "full",
-				get = function() return GoGo_Prefs.DruidClickForm end,
-				set = function(info, v) GoGo_Prefs.DruidClickForm = v end,
+				get = function() return self.db.char.DruidClickForm end,
+				set = function(info, v) self.db.char.DruidClickForm = v end,
 			},
 			druidFlightForm = {
 				name = addonTable.Localize.String.DruidFlightPreference,
 				type = "toggle",
 				order = 2,
 				width = "full",
-				get = function() return GoGo_Prefs.DruidFlightForm end,
-				set = function(info, v) GoGo_Prefs.DruidFlightForm = v end,
+				get = function() return self.db.char.DruidFlightForm end,
+				set = function(info, v) self.db.char.DruidFlightForm = v end,
 			},
 			autodismount = {
 				name = GOGO_STRING_ENABLEAUTODISMOUNT,
 				type = "toggle",
 				order = 3,
 				width = "full",
-				get = function() return GoGo_Prefs.autodismount end,
+				get = function() return self.db.char.autodismount end,
 				set = function(info, v)
-					GoGo_Prefs.autodismount = v
+					self.db.char.autodismount = v
 					if v then
 						self:RegisterEvent("UI_ERROR_MESSAGE")
 					else
@@ -1217,24 +1191,16 @@ function GoGoMount:GetOptions()
 				type = "toggle",
 				order = 4,
 				width = "full",
-				get = function() return GoGo_Prefs.genericfastflyer end,
-				set = function(info, v) GoGo_Prefs.genericfastflyer = v end,
+				get = function() return self.db.char.genericfastflyer end,
+				set = function(info, v) self.db.char.genericfastflyer = v end,
 			},
 			GlobalPrefMount = {
 				name = "Preferred mount changes apply to global setting",
 				type = "toggle",
 				order = 5,
 				width = "full",
-				get = function() return GoGo_Prefs.GlobalPrefMount end,
-				set = function(info, v) GoGo_Prefs.GlobalPrefMount = v end,
-			},
-			DisableMountNotice = {
-				name = GOGO_STRING_DISABLEUNKNOWNMOUNTNOTICES,
-				type = "toggle",
-				order = 6,
-				width = "full",
-				get = function() return GoGo_Prefs.DisableMountNotice end,
-				set = function(info, v) GoGo_Prefs.DisableMountNotice = v end,
+				get = function() return self.db.char.GlobalPrefMount end,
+				set = function(info, v) self.db.char.GlobalPrefMount = v end,
 			}
 		}
 	}
