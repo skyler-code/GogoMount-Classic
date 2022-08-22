@@ -7,7 +7,6 @@ BINDING_NAME_GOGOBINDING3 = "Mount/Dismount Passenger Mounts"
 
 addonTable.Player = {}
 addonTable.MountList = {}
---GoGo_DebugLog = {}
 addonTable.Localize = {}
 addonTable.Localize.Zone = {}
 addonTable.Localize.String = {}

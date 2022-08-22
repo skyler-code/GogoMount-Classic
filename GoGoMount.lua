@@ -29,9 +29,9 @@ function GoGoMount:CreateBindings()
 	}
 	
 	for k,v in ipairs(buttonInfo) do
-		local GoGoButton = CreateFrame("BUTTON", "GoGoButton"..k, UIParent, "SecureActionButtonTemplate")
-		GoGoButton:SetAttribute("type", "macro")
-		GoGoButton:SetScript("PreClick", function(btn)
+		local newBinding = CreateFrame("BUTTON", "GoGoButton"..k, UIParent, "SecureActionButtonTemplate")
+		newBinding:SetAttribute("type", "macro")
+		newBinding:SetScript("PreClick", function(btn)
 			if addonTable.Debug then GoGo_DebugAddLine("BUTTON: Button "..k.." pressed.") end
 			addonTable.SelectPassengerMount = v[1]
 			addonTable.SkipFlyingMount = v[2]
@@ -40,9 +40,7 @@ function GoGoMount:CreateBindings()
 	end
 end
 
----------
 function GoGoMount:OnInitialize()
----------
 	self:RegisterChatCommand("gogo", 'OnSlash')
 
 	self:CreateBindings()
@@ -82,7 +80,7 @@ function GoGoMount:VARIABLES_LOADED()
 end
 
 function GoGoMount:PLAYER_REGEN_DISABLED()
-	for i, button in ipairs({GoGoButton, GoGoButton2, GoGoButton3}) do
+	for i, button in ipairs({GoGoButton1, GoGoButton2, GoGoButton3}) do
 		if addonTable.Player.Class == "SHAMAN" then
 			GoGo_FillButton(button, GoGo_InBook(GOGO_SPELLS["SHAMAN"]))
 		elseif addonTable.Player.Class == "DRUID" then
@@ -130,9 +128,7 @@ function GoGoMount:COMPANION_LEARNED()
 	GoGo_CheckFor310()
 end
 
----------
 function GoGoMount:OnSlash(msg)
----------
 	if GOGO_COMMANDS[string.lower(msg)] then
 		GOGO_COMMANDS[string.lower(msg)]()
 	elseif string.find(msg, "ignore") then
@@ -205,10 +201,8 @@ function GoGo_PreClick(button)
 		else
 			GoGo_DebugAddLine("GoGo_PreClick: We are not moving as per GoGo_IsMoving()")
 		end
-		local map = C_Map.GetBestMapForUnit("player")
-		local position = C_Map.GetPlayerMapPosition(map, "player")
-		local posX, posY = position:GetXY()
-		GoGo_DebugAddLine("GoGo_PreClick: Player location: X = ".. posX .. ", Y = " .. posY)
+		local position = C_Map.GetPlayerMapPosition(C_Map.GetBestMapForUnit("player"), "player")
+		GoGo_DebugAddLine("GoGo_PreClick: Player location: X = ".. position.x .. ", Y = " .. position.y)
 	end
 
 	if not InCombatLockdown() then
@@ -625,9 +619,7 @@ function GoGo_FilterMountsIn(PlayerMounts, FilterID)
 	return GoGo_FilteringMounts
 end
 
----------
 function GoGo_Dismount(button)
----------
 	if IsMounted() then
 		Dismount()
 	elseif CanExitVehicle() then	
@@ -648,9 +640,7 @@ function GoGo_Dismount(button)
 	return true
 end
 
----------
 function GoGo_InCompanions(item)
----------
 	for slot = 1, GetNumCompanions("MOUNT") do
 		local _, _, spellID = GetCompanionInfo("MOUNT", slot)
 		if spellID and string.find(item, spellID) then
@@ -662,9 +652,7 @@ function GoGo_InCompanions(item)
 	end
 end
 
----------
 function GoGo_BuildMountList()
----------
 	addonTable.MountList = {}
 	if (table.getn(addonTable.MountSpellList) > 0) then
 		for a=1, table.getn(addonTable.MountSpellList) do
@@ -681,9 +669,7 @@ function GoGo_BuildMountList()
 	return addonTable.MountList
 end 
 
----------
 function GoGo_BuildMountSpellList()
----------
 	addonTable.MountSpellList = {}
 	if (GetNumCompanions("MOUNT") >= 1) then
 		for slot = 1, GetNumCompanions("MOUNT"),1 do
@@ -695,7 +681,7 @@ function GoGo_BuildMountSpellList()
 		end
 	end
 	return addonTable.MountSpellList
-end  -- function
+end
 
 function GoGo_BuildMountItemList()
 	addonTable.MountItemList = {}
@@ -711,32 +697,25 @@ function GoGo_BuildMountItemList()
 	return addonTable.MountItemList
 end
 
----------
 function GoGo_InBags(item)
----------
 	if addonTable.Debug then
 		GoGo_DebugAddLine("GoGo_InBags: Searching for " .. item)
 	end
 
 	for bag = 0, NUM_BAG_FRAMES do
 		for slot = 1, GetContainerNumSlots(bag) do
-			local link = GetContainerItemLink(bag, slot)
-			if link then
-				local _, itemid, _ = strsplit(":",link,3)
-				if tonumber(itemid) == item then
-					if addonTable.Debug then 
-						GoGo_DebugAddLine("GoGo_InBags: Found item ID " .. item .. " in bag " .. (bag+1) .. ", at slot " .. slot .. " and added to known mount list.")
-					end
-					return GetItemInfo(link)
+			local itemId = GetContainerItemID(bag, slot)
+			if itemId == item then
+				if addonTable.Debug then 
+					GoGo_DebugAddLine("GoGo_InBags: Found item ID " .. item .. " in bag " .. (bag+1) .. ", at slot " .. slot .. " and added to known mount list.")
 				end
+				return GetItemInfo(itemId)
 			end
 		end
 	end
 end
 
----------
 function GoGo_InBook(spell)
----------
 	if addonTable.Debug then
 		GoGo_DebugAddLine("GoGo_InBook: Searching for type " .. type(spell))
 	end
@@ -772,9 +751,7 @@ function GoGo_InBook(spell)
 	end
 end
 
----------
 function GoGo_IsShifted()
----------
 	if addonTable.Debug then
 		GoGo_DebugAddLine("GoGo_IsShifted:  GoGo_IsShifted starting")
 	end
@@ -790,16 +767,13 @@ function GoGo_IsShifted()
 	end
 end
 
----------
 function GoGo_InOutlands()
----------
 	if string.find(GOGO_OUTLANDS, addonTable.Player.Zone, 1, true) then
 		return true
 	end
 end
 
 function GoGo_InNorthrend()
----------
 	if string.find(GOGO_NORTHREND, addonTable.Player.Zone, 1, true) then
 		return true
 	end
