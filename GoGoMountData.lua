@@ -1,18 +1,19 @@
-BINDING_HEADER_GOGOHEADER = "GoGoMount"
+local addonName, addonTable = ...
+
+BINDING_HEADER_GOGOHEADER = addonName
 BINDING_NAME_GOGOBINDING = "Mount/Dismount"
 BINDING_NAME_GOGOBINDING2 = "Mount/Dismount (no flying)"
 BINDING_NAME_GOGOBINDING3 = "Mount/Dismount Passenger Mounts"
 
-GoGo_Variables = {}
-GoGo_Variables.Player = {}
-GoGo_Variables.MountList = {}
+addonTable.Player = {}
+addonTable.MountList = {}
 --GoGo_DebugLog = {}
-GoGo_Variables.Localize = {}
-GoGo_Variables.Localize.Zone = {}
-GoGo_Variables.Localize.String = {}
-GoGo_Variables.Localize.Skill = {}
+addonTable.Localize = {}
+addonTable.Localize.Zone = {}
+addonTable.Localize.String = {}
+addonTable.Localize.Skill = {}
 
-GoGo_Variables.MountDB = {
+addonTable.MountDB = {
 	[25953] = {[16] = true, [21] = true, [38] = true, [50] = true, [51] = true},  -- Blue Qiraji Battle Tank
 	[26055] = {[16] = true, [21] = true, [38] = true, [50] = true, [51] = true},  -- Yellow Qiraji Battle Tank
 	[26054] = {[16] = true, [21] = true, [38] = true, [50] = true, [51] = true},  -- Red Qiraji Battle Tank
@@ -397,21 +398,9 @@ GoGo_Variables.MountDB = {
 	[783] = {[28] = true}, -- GOGO_DRUID_TRAVELFORM
 	[2645] = {[28] = true}, -- GOGO_SHAMAN_GHOSTWOLF
 	
--- Mounts for Cataclysm (keeping seperate as they may change before release)
-	[69820] = {[14] = true, [20] = true, [38] = true},  -- Sunwalker Kodo
-	[69826] = {[16] = true, [21] = true, [37] = true},  -- Great Sunwalker Kodo
-	[73629] = {[14] = true, [20] = true, [38] = true},  -- Exarch's Elekk
-	[73630] = {[16] = true, [21] = true, [37] = true},  -- Great Exarch's Elekk
-	[75207] = {[8] = true, [30] = true, [17] = true, [35] = true},  -- Abyssal Seahorse (was Abyssal Manta)
-	[84751] = {[16] = true, [21] = true, [37] = true},  -- Fossilized Raptor
-	[87090] = {[14] = true, [20] = true, [38] = true}, -- Goblin Trike
-	[87091] = {[16] = true, [21] = true, [37] = true}, -- Goblin Turbo-Trike
-	[88331] = {[9] = true, [11] = true, [24] = true}, -- Volcanic Stone Drake
-	[88335] = {[9] = true, [11] = true, [24] = true, [35] = true}, -- Drake of the East Wind
-	
 }
 	
-GoGo_MountsItems = {
+addonTable.MountsItems = {
 	[1] = 33189,
 	[2] = 37011,
 	[3] = 33183,
@@ -424,49 +413,3 @@ GoGo_MountsItems = {
 	[10] = 37860,
 	[11] = 37815,
 }
-
---[[
-GoGo_FlyCoOrds = {   -- x = west / east,  y = north / south
-	["Dalaran"] = {
-		["Underbelly"] = {
-			[1] = {0.09200777113437, 0.53064680099487, 0.30007892847061, 0.88580405712128},  -- south west pipe
---			[2] = {0.00000000000000, 0.00000000000000, 0.00000000000000, 0.00000000000000},  -- 3.0.8 PTR the pipe did not have any location co-ordinates as well as other parts of underbelly
-		},
-		["Dalaran"] = {
-			[1] = {0.32762300968170, 0.92964243888855, 0.44406870007515, 0.99999999999999},  -- south floating rock - south part of rock is off dalaran map and zero's out
-			[2] = {0.00000000000000, 0.00000000000000, 0.00000000000000, 0.00000000000000},  -- south end of south floating rock that's considered off the dalaran map, north end of north floating rock
-			[3] = {0.84375905990601, 0.53441548347473, 0.92961716651917, 0.56119620800018},  -- east floating rock near Karasus' Landing - north half
-			[4] = {0.81565266847610, 0.56119620800018, 0.92961716651917, 0.62259274721146},  -- east floating rock near Karasus' Landing - middle section
-			[5] = {0.82037299871445, 0.62259274721146, 0.92961716651917, 0.65996080636978},  -- east floating rock near Karasus' Landing - south of above middle section
-			[6] = {0.83119285106659, 0.65996080636978, 0.92961716651917, 0.69355386495590},  -- east floating rock near Karasus' Landing - south half
-			[7] = {0.24048496782780, 0.00000000000000, 0.35678505897522, 0.06878154724837},  -- north floating rock - middle section
-			[8] = {0.24048496782780, 0.06878154724837, 0.32650312781334, 0.09258409589529},  -- north floating rock - south section
-			[9] = {0.73049765825272, 0.58968532085419, 0.82789492607117, 0.69320708513260},  -- outer rim - south of Karasus' Landing
-			[10] = {0.78565186262131, 0.69320708513260, 0.82789492607117, 0.90059036016464},  -- outer rim - south of above
-			[11] = {0.19430139660835, 0.73027163743973, 0.82789492607117, 0.91422116756439},  -- outer rim - south end
-			[12] = {0.07060649325275, 0.27633512020111, 0.26812949776649, 0.73027163743973},  -- outer rim - west end
-			[13] = {0.12171425670385, 0.13289329409599, 0.29824274778366, 0.34425541758537},  -- outer rim - north end - east from above
-			[14] = {0.29824274778366, 0.13289329409599, 0.30157667398453, 0.34425541758537},  -- outer rim - north end - east from above
-			[15] = {0.30157667398453, 0.13289329409599, 0.30533048510551, 0.33688980340958},  -- outer rim - north end - east from above
-			[16] = {0.30533048510551, 0.13289329409599, 0.30807453393936, 0.32788288593292},  -- outer rim - north end - east from above
-			[17] = {0.30807453393936, 0.13289329409599, 0.31300327181816, 0.32129821181297},  -- outer rim - north end - east from above
-			[18] = {0.31300327181816, 0.13289329409599, 0.31939730048180, 0.30955401062965},  -- outer rim - north end - east from above
-			[19] = {0.31939730048180, 0.05900426954031, 0.42953002452850, 0.27856853604317},  -- outer rim - north end - east from above
-			[20] = {0.42953002452850, 0.01805531047284, 0.52528887987137, 0.16944953799248},  -- outer rim - north end - east from above
-			[21] = {0.52528887987137, 0.01805531047284, 0.74681603908539, 0.16944953799248},  -- outer rim - north end - east from above
-			[22] = {0.67614758014679, 0.16781881451607, 0.82789492607117, 0.73049765825272},  -- outer rim - north east - south east from above to Karasus' Landing
-		},
-		["VioletCitadel"] = {
-			[1] = {0.24813342094431, 0.42324751615524, 0.26391690969467, 0.43607267737389},  -- upper level south part
-			[2] = {0.25418719649315, 0.41306078433990, 0.26763379573822, 0.42324751615524},  -- upper level north east from above
-			[3] = {0.25979378819466, 0.40825596451759, 0.26960688829422, 0.41306078433990},  -- upper level north from above
-			[4] = {0.26259636878967, 0.39096131920815, 0.27175131440163, 0.40825596451759},  -- upper level north from above
-			[5] = {0.26015603542328, 0.37608715891838, 0.27175131440163, 0.39096131920815},  -- upper level north west from above
-			[6] = {0.24976442754269, 0.36279606819153, 0.26814296841621, 0.37608715891838},  -- upper level north west from above
-			[7] = {0.21763536334038, 0.34758481383324, 0.26284533739090, 0.36279606819153},  -- upper level north part
-			[8] = {0.21075734496117, 0.36279606819153, 0.23006491363049, 0.38133582472801},  -- upper level south west from above
-			[9] = {0.20883683860302, 0.38133582472801, 0.22105532884598, 0.41938513517380},  -- upper level south from above
-		},
-	},
-}
-]]

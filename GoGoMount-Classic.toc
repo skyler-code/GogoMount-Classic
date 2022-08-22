@@ -14,4 +14,13 @@
 ## SavedVariablesPerCharacter: GoGo_Prefs GoGo_DebugLog
 ## X-Email:  gogo@funkymonkey.org
 ## X-OriginalVersion: Tak teh Troll @ Shadowsong EU
-GoGoMount.xml
+
+
+GoGoMountData.lua
+
+
+localization.lua
+
+GoGoMount.lua
+
+bindings.xml

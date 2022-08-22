@@ -1,17 +1,5 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\FrameXML\UI.xsd">
-	<Script file="GoGoMountData.lua"/>
-	<Script file="localization.lua"/>
-	<Script file="GoGoMount.lua"/>
-	<Frame name="GoGoFrame">
-		<Scripts>
-			<OnLoad>
-				GoGo_OnLoad();
-			</OnLoad>
-			<OnEvent>
-				GoGo_OnEvent(event);
-			</OnEvent>
-		</Scripts>
-	</Frame>
+
 	<Button name="GoGoButton" inherits="SecureActionButtonTemplate" parent="UIParent" frameStrata="LOW" hidden="false">
 		<Attributes>
 			<Attribute name="type" type="string" value="macro"/>
