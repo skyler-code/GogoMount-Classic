@@ -3,6 +3,23 @@ local addonName, addonTable = ...
 local GoGoMount = CreateFrame("FRAME", addonName)
 local GoGo_Panel = CreateFrame("FRAME")
 
+local function GetZoneNames(mapId)
+	local zoneStr = ""
+	local zones = C_Map.GetMapChildrenInfo(mapId)
+	if zones then
+		for i, zoneInfo in ipairs(zones) do
+			zoneStr = zoneStr .. zoneInfo.name .. ":"
+		end
+	end
+	return zoneStr
+end
+
+local function parseForItemId(msg)
+	local FItemID = string.gsub(msg,".-\124H([^\124]*)\124h.*", "%1");
+	local idtype, itemid = strsplit(":",FItemID);
+	return idtype, tonumber(itemid)
+end
+
 ---------
 function GoGoMount:OnLoad()
 ---------
@@ -22,17 +39,6 @@ function GoGoMount:OnLoad()
 	self:UnregisterEvent("ADDON_LOADED")
 end --function
 
-local function GetZoneNames(mapId)
-	local zoneStr = ""
-	local zones = C_Map.GetMapChildrenInfo(mapId)
-	if zones then
-		for i, zoneInfo in ipairs(zones) do
-			zoneStr = zoneStr .. zoneInfo.name .. ":"
-		end
-	end
-	return zoneStr
-end
-
 ---------
 function GoGoMount:OnEvent(event, arg1)
 ---------
@@ -45,9 +51,6 @@ function GoGoMount:OnEvent(event, arg1)
 			GoGo_Settings_Default()
 		end --if
 
---		GoGo_Localize()
-
---		GoGo_LoadMountDB()
 		addonTable.TestVersion = false
 		addonTable.Debug = false
 		_, addonTable.Player.Class = UnitClass("player")
