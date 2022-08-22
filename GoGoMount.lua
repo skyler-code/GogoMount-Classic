@@ -242,8 +242,6 @@ function GoGo_PreClick(button)
 		end --if
 		GoGo_FillButton(button, GoGo_GetMount())
 	end --if
-
-	addonTable.Debug = false
 end --function
 
 ---------
