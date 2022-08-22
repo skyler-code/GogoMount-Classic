@@ -20,6 +20,24 @@ local function parseForItemId(msg)
 	return idtype, tonumber(itemid)
 end
 
+function GoGoMount:CreateBindings()
+	local buttonInfo = {
+		{false,nil}, -- main
+		{false,true}, -- no flying
+		{true,false} -- passenger mounts
+	}
+	
+	for k,v in ipairs(buttonInfo) do
+		local GoGoButton = CreateFrame("BUTTON", "GoGoButton"..k, UIParent, "SecureActionButtonTemplate")
+		GoGoButton:SetScript("PreClick", function(btn)
+			if addonTable.Debug then GoGo_DebugAddLine("BUTTON: Button "..k.." pressed.") end
+			addonTable.SelectPassengerMount = v[1]
+			addonTable.SkipFlyingMount = v[2]
+			GoGo_PreClick(btn)
+		end)
+	end
+end
+
 ---------
 function GoGoMount:OnLoad()
 ---------
@@ -27,6 +45,8 @@ function GoGoMount:OnLoad()
 	SlashCmdList["GOGOMOUNT"] = function(msg) GoGo_OnSlash(msg) end
 	SLASH_GOGOID1 = "/id"
 	SlashCmdList["GOGOID"] = function(msg) GoGo_Msg(GoGo_Id(msg)) end
+
+	self:CreateBindings()
 
 	GoGo_Panel:OnLoad()
 
@@ -51,8 +71,8 @@ function GoGoMount:OnEvent(event, arg1)
 			GoGo_Settings_Default()
 		end --if
 
-		addonTable.TestVersion = false
-		addonTable.Debug = false
+		addonTable.TestVersion = true
+		addonTable.Debug = true
 		_, addonTable.Player.Class = UnitClass("player")
 		if (addonTable.Player.Class == "DRUID") then
 			addonTable.Druid = {}
@@ -63,6 +83,7 @@ function GoGoMount:OnEvent(event, arg1)
 		end --if
 		GOGO_OUTLANDS = GetZoneNames(1945)..addonTable.Localize.Zone.TwistingNether
 		GOGO_NORTHREND = GetZoneNames(113)..addonTable.Localize.Zone.TheFrozenSea
+		addonTable.Player.Zone = GetRealZoneText()
 		self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 		if not GoGo_Prefs.version then
 			GoGo_Settings_Default()
@@ -82,7 +103,6 @@ function GoGoMount:OnEvent(event, arg1)
 			end --if
 		end --for
 	elseif event == "ZONE_CHANGED_NEW_AREA" then
-		SetMapToCurrentZone()
 		addonTable.Player.Zone = GetRealZoneText()
 	elseif event == "TAXIMAP_OPENED" then
 		GoGo_Dismount()
@@ -114,12 +134,6 @@ end --function
 
 GoGoMount:RegisterEvent("ADDON_LOADED")
 GoGoMount:SetScript("OnEvent", function(frame, ...) frame:OnEvent(...) end)
-
-local function parseForItemId(msg)
-	local FItemID = string.gsub(msg,".-\124H([^\124]*)\124h.*", "%1");
-	local idtype, itemid = strsplit(":",FItemID);
-	return idtype, tonumber(itemid)
-end
 
 ---------
 function GoGo_OnSlash(msg)
@@ -196,7 +210,9 @@ function GoGo_PreClick(button)
 		else
 			GoGo_DebugAddLine("GoGo_PreClick: We are not moving as per GoGo_IsMoving()")
 		end --if
-		local posX, posY = GetPlayerMapPosition("Player")
+		local map = C_Map.GetBestMapForUnit("player")
+		local position = C_Map.GetPlayerMapPosition(map, "player")
+		local posX, posY = position:GetXY()
 		GoGo_DebugAddLine("GoGo_PreClick: Player location: X = ".. posX .. ", Y = " .. posY)
 	end --if
 
@@ -755,8 +771,8 @@ function GoGo_InBook(spell)
 				GoGo_DebugAddLine("GoGo_InBook: Searching for " .. spell)
 			end --if
 			local slot = 1
-			while GetSpellName(slot, "spell") do
-				local name = GetSpellName(slot, "spell")
+			while GetSpellBookItemName(slot, "spell") do
+				local name = GetSpellBookItemName(slot, "spell")
 				if name == spell then
 					return spell
 				end --if
@@ -768,8 +784,8 @@ function GoGo_InBook(spell)
 				GoGo_DebugAddLine("GoGo_InBook: Searching for spell ID " .. spell)
 			end --if
 			local slot = 1
-			while GetSpellName(slot, "spell") do
-				local name = GetSpellName(slot, "spell")
+			while GetSpellBookItemName(slot, "spell") do
+				local name = GetSpellBookItemName(slot, "spell")
 				if name == spellname then
 					return name
 				end --if
@@ -968,7 +984,7 @@ end --function
 ---------
 function GoGo_CheckBindings()
 ---------
-	for binding, button in pairs({GOGOBINDING = GoGoButton, GOGOBINDING2 = GoGoButton2, GOGOBINDING3 = GoGoButton3}) do
+	for binding, button in pairs({GOGOBINDING = GoGoButton1, GOGOBINDING2 = GoGoButton2, GOGOBINDING3 = GoGoButton3}) do
 		ClearOverrideBindings(button)
 		local key1, key2 = GetBindingKey(binding)
 		if key1 then
@@ -987,11 +1003,6 @@ function GoGo_CanFly()
 	addonTable.Player.SubZone = GetSubZoneText()
 
 	local level = UnitLevel("player")
---	if (level <= 69) and not (addonTable.Player.Class == "DRUID") then
---		return false
---	elseif (addonTable.Player.Class == "DRUID" and level <= 67) then
---		return false
---	end --if
 	if (level < 60) then
 		if addonTable.Debug then
 			GoGo_DebugAddLine("GoGo_CanFly: Failed - Player under level 60")
@@ -1121,15 +1132,9 @@ function GoGo_CheckFor310()  -- checks to see if any existing 310% mounts exist 
 	end --if
 end --function
 
----------
 function GoGo_IsMoving()
----------
-    if GetUnitSpeed("player") ~= 0 then
-        return true
-    else
-        return false
-    end --if
-end --function
+    return GetUnitSpeed("player") ~= 0
+end
 
 ---------
 function GoGo_GetSkillLevel(searchname)
@@ -1271,6 +1276,7 @@ GOGO_COMMANDS = {
 	end, --function
 	["options"] = function()
 		InterfaceOptionsFrame_OpenToCategory(GoGo_Panel)
+		InterfaceOptionsFrame_OpenToCategory(GoGo_Panel)
 	end, --function
 }
 
@@ -1409,27 +1415,6 @@ function GoGo_Panel_GlobalFavorites_OnLoad(GoGo_Panel_GlobalFavorites)
 	InterfaceOptions_AddCategory(GoGo_Panel_GlobalFavorites)
 end --function
 
---[[
----------
-function GoGo_Panel_GlobalFavorites_Populate()
----------
-
-	
-	if getn(addonTable.MountList) > 0 then
-		for numMounts = 1, getn(addonTable.MountList) do
-			GoGo_CurrentMountID = CreateFrame("CheckButton", addonTable.MountList[numMounts], GoGo_Panel_GlobalFavorites, "OptionsCheckButtonTemplate")
-			GoGo_CurrentMountID:SetPoint("TOPLEFT", numMounts * 16, -16)
-			--GoGo_Panel_MountItem = getglobal(GoGo_Panel_MountItem[GoGo_CurrentMountID])
-			GoGo_CurrentMountIDText:SetText(addonTable.MountList[numMounts])
-	
-		end --for
-	end --if
-	
-
-
-end --function
-
-]]
 ---------
 function GoGo_Panel_Options()
 ---------
@@ -1516,7 +1501,6 @@ function GoGo_Panel_Okay()
 	GoGo_Prefs.DruidClickForm = GoGo_Panel_DruidClickForm:GetChecked()
 	GoGo_Prefs.DruidFlightForm = GoGo_Panel_DruidFlightForm:GetChecked()
 	GoGo_Prefs.GlobalPrefMount = GoGo_Panel_GlobalPrefMount:GetChecked()
-	--	GoGo_Prefs.PaliUseCrusader = GoGo_Panel_PaliUseCrusader:GetChecked()
 end --function
 
 ---------
@@ -1532,13 +1516,12 @@ function GoGo_Settings_Default()
 	GoGo_Prefs.UnknownMounts = {}
 	GoGo_Prefs.GlobalPrefMounts = {}
 	GoGo_Prefs.GlobalPrefMount = false
---	GoGo_Prefs.PaliUseCrusader = false
 end --function
 
 ---------
 function GoGo_Settings_SetUpdates()
 ---------
-	GoGo_Prefs.version = GetAddOnMetadata("GoGoMount", "Version")
+	GoGo_Prefs.version = GetAddOnMetadata(addonName, "Version")
 	if not GoGo_Prefs.autodismount then GoGo_Prefs.autodismount = false end
 	if not GoGo_Prefs.DisableUpdateNotice then GoGo_Prefs.DisableUpdateNotice = false end
 	if not GoGo_Prefs.DisableMountNotice then GoGo_Prefs.DisableMountNotice = false end
@@ -1546,7 +1529,6 @@ function GoGo_Settings_SetUpdates()
 	if not GoGo_Prefs.DruidClickForm then GoGo_Prefs.DruidClickForm = false end
 	if not GoGo_Prefs.DruidFlightForm then GoGo_Prefs.DruidFlightForm = false end
 	if not GoGo_Prefs.GlobalPrefMount then GoGo_Prefs.GlobalPrefMount = false end
---	if not GoGo_Prefs.PaliUseCrusader then GoGo_Prefs.PaliUseCrusader = false end
 	GoGo_Prefs.UnknownMounts = {}
 end --function
 
