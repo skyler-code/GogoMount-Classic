@@ -29,6 +29,7 @@ function GoGoMount:CreateBindings()
 	
 	for k,v in ipairs(buttonInfo) do
 		local GoGoButton = CreateFrame("BUTTON", "GoGoButton"..k, UIParent, "SecureActionButtonTemplate")
+		GoGoButton:SetAttribute("type", "macro")
 		GoGoButton:SetScript("PreClick", function(btn)
 			if addonTable.Debug then GoGo_DebugAddLine("BUTTON: Button "..k.." pressed.") end
 			addonTable.SelectPassengerMount = v[1]
