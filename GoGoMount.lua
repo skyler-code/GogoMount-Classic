@@ -803,8 +803,9 @@ function GoGo_IsShifted()
 		GoGo_DebugAddLine("GoGo_IsShifted:  GoGo_IsShifted starting")
 	end --if
 	for i = 1, GetNumShapeshiftForms() do
-		local _, name, active = GetShapeshiftFormInfo(i)
+		local _, active, castable, spellID = GetShapeshiftFormInfo(i)
 		if active then
+			local name = GetSpellInfo(spellID)
 			if addonTable.Debug then
 				GoGo_DebugAddLine("GoGo_IsShifted: Found " .. name)
 			end --if
