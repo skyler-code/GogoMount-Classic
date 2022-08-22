@@ -7,10 +7,19 @@ BINDING_NAME_GOGOBINDING3 = "Mount/Dismount Passenger Mounts"
 
 addonTable.Player = {}
 addonTable.MountList = {}
-addonTable.Localize = {}
-addonTable.Localize.Zone = {}
-addonTable.Localize.String = {}
-addonTable.Localize.Skill = {}
+
+addonTable.SpellDB = {
+	ColdWeatherFlying = 54197,
+	FastFlightForm = 40120,
+	FlightForm = 33943,
+	AquaForm = 1066,
+	TravelForm = 783,
+	CatForm = 768,
+	GhostWolf = 2645,
+	AspectCheetah = 5118,
+	Engineering = 4036,
+	Tailoring = 5118
+}
 
 addonTable.MountDB = {
 	[25953] = {[16] = true, [21] = true, [38] = true, [50] = true, [51] = true},  -- Blue Qiraji Battle Tank

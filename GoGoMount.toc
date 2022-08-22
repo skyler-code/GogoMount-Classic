@@ -7,8 +7,9 @@
 ## SavedVariablesPerCharacter: GoGoMount_DB, GoGo_DebugLog
 ## X-OriginalVersion: Tak teh Troll @ Shadowsong EU
 
+locales.xml
 
 GoGoMountData.lua
-localization.lua
 GoGoMount.lua
+
 bindings.xml
