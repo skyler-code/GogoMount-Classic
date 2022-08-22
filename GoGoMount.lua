@@ -1232,8 +1232,8 @@ GOGO_COMMANDS = {
 		GoGo_Panel_UpdateViews()
 	end, --function
 	["options"] = function()
-		InterfaceOptionsFrame_OpenToCategory(GoGo_Panel)
-		InterfaceOptionsFrame_OpenToCategory(GoGo_Panel)
+		InterfaceOptionsFrame_OpenToCategory(addonName)
+		InterfaceOptionsFrame_OpenToCategory(addonName)
 	end, --function
 }
 
