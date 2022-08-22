@@ -1068,7 +1068,7 @@ function GoGo_CanFly()
 		end --if
 
 		if addonTable.Player.Zone == addonTable.Localize.Zone.Wintergrasp then
-			if GetWintergraspWaitTime() then
+			if GetWintergraspWaitTime and GetWintergraspWaitTime() then
 				if addonTable.Debug then
 					GoGo_DebugAddLine("GoGo_CanFly: Player in Wintergrasp and battle ground is not active.")
 				end --if
