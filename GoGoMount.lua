@@ -72,8 +72,8 @@ function GoGoMount:OnEvent(event, arg1)
 			GoGo_Settings_Default()
 		end --if
 
-		addonTable.TestVersion = true
-		addonTable.Debug = true
+		addonTable.TestVersion = false
+		addonTable.Debug = false
 		_, addonTable.Player.Class = UnitClass("player")
 		if (addonTable.Player.Class == "DRUID") then
 			addonTable.Druid = {}
