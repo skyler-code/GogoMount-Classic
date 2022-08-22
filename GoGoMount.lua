@@ -47,7 +47,9 @@ function GoGoMount:OnInitialize()
 
 	self:CreateBindings()
 
-	GoGo_Panel:OnLoad()
+	-- Register our options
+	LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(addonName, self:GetOptions())
+	LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, addonName)
 
 	self:RegisterEvent("VARIABLES_LOADED")
 	self:RegisterEvent("UPDATE_BINDINGS")
@@ -1423,3 +1425,24 @@ function GoGo_Settings_SetUpdates()
 	GoGo_Prefs.UnknownMounts = {}
 end --function
 
+
+
+function GoGoMount:GetOptions()
+	-- Build options table --
+	local options = {
+		type = "group",
+		name = addonName,
+		args = {
+			druidClickForm = {
+				name = GOGO_STRING_DRUIDSINGLECLICK,
+				type = "toggle",
+				order = 1,
+				width = "full",
+				get = function() return GoGo_Prefs.DruidClickForm end,
+				set = function(info, v) GoGo_Prefs.DruidClickForm = v end,
+			}
+		}
+	}
+
+	return options
+end
