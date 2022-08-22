@@ -1254,11 +1254,6 @@ GOGO_COMMANDS = {
 		end --if
 		GoGo_Msg("pref")
 	end, --function
-	["updatenotice"] = function()
-		GoGo_Prefs.DisableUpdateNotice = not GoGo_Prefs.DisableUpdateNotice
-		GoGo_Msg("updatenotice")
-		GoGo_Panel_UpdateViews()
-	end, --function
 	["mountnotice"] = function()
 		GoGo_Prefs.DisableMountNotice = not GoGo_Prefs.DisableMountNotice
 		GoGo_Msg("mountnotice")
@@ -1339,13 +1334,6 @@ GOGO_MESSAGES = {
 				msg = msg .. "\n" .. addonTable.Player.Zone ..": "..list.." - Disable global mount preferences to change."
 			end --if
 			return msg
-		end --if
-	end, --function
-	["updatenotice"] = function()
-		if GoGo_Prefs.DisableUpdateNotice then
-			return "Update notices from other players disabled - </gogo updatenotice> to toggle"
-		else
-			return "Update notices from other players enabled - </gogo updatenotice> to toggle"
 		end --if
 	end, --function
 	["mountnotice"] = function()
@@ -1439,36 +1427,9 @@ function GoGo_Panel_Options()
 	GoGo_Panel_GlobalPrefMount:SetPoint("TOPLEFT", "GoGo_Panel_GenericFastFlyer", "BOTTOMLEFT", 0, -4)
 	GoGo_Panel_GlobalPrefMountText:SetText("Preferred mount changes apply to global setting")
 
---	GoGo_Panel_PaliUseCrusader = CreateFrame("CheckButton", "GoGo_Panel_PaliUseCrusader", GoGo_Panel, "OptionsCheckButtonTemplate")
---	GoGo_Panel_PaliUseCrusader:SetPoint("TOPLEFT", "GoGo_Panel_GlobalPrefMount", "BOTTOMLEFT", 0, -4)
---	GoGo_Panel_PaliUseCrusaderText:SetText("Paladins:  Auto start Crusader Aura when mounting")
-
-	GoGo_Panel_DisableUpdateNotice = CreateFrame("CheckButton", "GoGo_Panel_DisableUpdateNotice", GoGo_Panel, "OptionsCheckButtonTemplate")
---	GoGo_Panel_DisableUpdateNotice:SetPoint("TOPLEFT", "GoGo_Panel_PaliUseCrusader", "BOTTOMLEFT", 0, -12)
-	GoGo_Panel_DisableUpdateNotice:SetPoint("TOPLEFT", "GoGo_Panel_GlobalPrefMount", "BOTTOMLEFT", 0, -12)
-	GoGo_Panel_DisableUpdateNoticeText:SetText(GOGO_STRING_DISABLEUPDATENOTICES)
-
 	GoGo_Panel_DisableMountNotice = CreateFrame("CheckButton", "GoGo_Panel_DisableMountNotice", GoGo_Panel, "OptionsCheckButtonTemplate")
-	GoGo_Panel_DisableMountNotice:SetPoint("TOPLEFT", "GoGo_Panel_DisableUpdateNotice", "BOTTOMLEFT", 0, -4)
+	GoGo_Panel_DisableMountNotice:SetPoint("TOPLEFT", "GoGo_Panel_GlobalPrefMount", "BOTTOMLEFT", 0, -4)
 	GoGo_Panel_DisableMountNoticeText:SetText(GOGO_STRING_DISABLEUNKNOWNMOUNTNOTICES)
-end --function
-
----------
-function GoGo_Panel_GlobalFavorites_Scroll_Update()
----------
-	local line; -- 1 through 5 of our window to scroll
-	local lineplusoffset; -- an index into our data calculated from the scroll offset
-	FauxScrollFrame_Update(GoGo_Panel_GlobalFavorites_Scroll,50,20,16);
-	for line=1,20 do
-		lineplusoffset = line + FauxScrollFrame_GetOffset(GoGo_Panel_GlobalFavorites_Scroll);
-		if lineplusoffset <= 50 then
-			getglobal("GoGo_Panel_GlobalFavorites_Line"..line):SetText(GoGo_GetIDName(addonTable.MountSpellList[lineplusoffset]));
-			--GoGo_DebugAddLine(GoGo_GetIDName(addonTable.MountSpellList[lineplusoffset]))
-			getglobal("GoGo_Panel_GlobalFavorites_Line"..line):Show();
-		else
-			getglobal("GoGo_Panel_GlobalFavorites_Line"..line):Hide();
-		end --if
-	end  --for
 end --function
 
 ---------
@@ -1476,13 +1437,10 @@ function GoGo_Panel_UpdateViews()
 ---------
 	GoGo_Panel_AutoDismount:SetChecked(GoGo_Prefs.autodismount)
 	GoGo_Panel_GenericFastFlyer:SetChecked(GoGo_Prefs.genericfastflyer)
-
-	GoGo_Panel_DisableUpdateNotice:SetChecked(GoGo_Prefs.DisableUpdateNotice)
 	GoGo_Panel_DisableMountNotice:SetChecked(GoGo_Prefs.DisableMountNotice)
 	GoGo_Panel_DruidClickForm:SetChecked(GoGo_Prefs.DruidClickForm)
 	GoGo_Panel_DruidFlightForm:SetChecked(GoGo_Prefs.DruidFlightForm)
 	GoGo_Panel_GlobalPrefMount:SetChecked(GoGo_Prefs.GlobalPrefMount)
---	GoGo_Panel_PaliUseCrusader:SetChecked(GoGo_Prefs.PaliUseCrusader)
 	
 	if GoGo_Prefs.autodismount then
 		GoGoMount:RegisterEvent("UI_ERROR_MESSAGE")
@@ -1496,7 +1454,6 @@ function GoGo_Panel_Okay()
 ---------
 	GoGo_Prefs.autodismount = GoGo_Panel_AutoDismount:GetChecked()
 	GoGo_Prefs.genericfastflyer = GoGo_Panel_GenericFastFlyer:GetChecked()
-	GoGo_Prefs.DisableUpdateNotice = GoGo_Panel_DisableUpdateNotice:GetChecked()
 	GoGo_Prefs.DisableMountNotice = GoGo_Panel_DisableMountNotice:GetChecked()
 	GoGo_Prefs.DruidClickForm = GoGo_Panel_DruidClickForm:GetChecked()
 	GoGo_Prefs.DruidFlightForm = GoGo_Panel_DruidFlightForm:GetChecked()
@@ -1508,11 +1465,10 @@ function GoGo_Settings_Default()
 ---------
 	GoGo_Prefs.version = GetAddOnMetadata(addonName, "Version")
 	GoGo_Prefs.autodismount = true
-	GoGo_Prefs.DisableUpdateNotice = false
 	GoGo_Prefs.DisableMountNotice = false
 	GoGo_Prefs.genericfastflyer = false
 	GoGo_Prefs.DruidClickForm = true
-	GoGo_Prefs.DruidFlightForm = false
+	GoGo_Prefs.DruidFlightForm = true
 	GoGo_Prefs.UnknownMounts = {}
 	GoGo_Prefs.GlobalPrefMounts = {}
 	GoGo_Prefs.GlobalPrefMount = false
@@ -1523,7 +1479,6 @@ function GoGo_Settings_SetUpdates()
 ---------
 	GoGo_Prefs.version = GetAddOnMetadata(addonName, "Version")
 	if not GoGo_Prefs.autodismount then GoGo_Prefs.autodismount = false end
-	if not GoGo_Prefs.DisableUpdateNotice then GoGo_Prefs.DisableUpdateNotice = false end
 	if not GoGo_Prefs.DisableMountNotice then GoGo_Prefs.DisableMountNotice = false end
 	if not GoGo_Prefs.genericfastflyer then GoGo_Prefs.genericfastflyer = false end
 	if not GoGo_Prefs.DruidClickForm then GoGo_Prefs.DruidClickForm = false end
