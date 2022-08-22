@@ -127,11 +127,7 @@ function GoGoMount:VARIABLES_LOADED()
 	addonTable.TestVersion = false
 	addonTable.Debug = false
 	_, addonTable.Player.Class = UnitClass("player")
-	if (addonTable.Player.Class == "DRUID") then
-		addonTable.Druid = {}
-		self:RegisterEvent("PLAYER_REGEN_DISABLED")
-	elseif (addonTable.Player.Class == "SHAMAN") then
-		addonTable.Shaman = {}
+	if addonTable.Player.Class == "DRUID" or addonTable.Player.Class == "SHAMAN" then
 		self:RegisterEvent("PLAYER_REGEN_DISABLED")
 	end
 	addonTable.Player.Zone = GetRealZoneText()
@@ -295,11 +291,10 @@ end
 
 function GoGoMount:ChooseMount()
 	if (addonTable.Player.Class == "DRUID") then
-		addonTable.Druid.FeralSwiftness = select(5, GetTalentInfo(2, 12))
 		if IsIndoors() then
 			if IsSwimming() then
 				return SpellInBook(addonTable.Localize.AquaForm)
-			elseif addonTable.Druid.FeralSwiftness > 0 then
+			elseif select(5, GetTalentInfo(2, 12)) > 0 then
 				return SpellInBook(addonTable.Localize.CatForm)
 			end
 			return
@@ -314,8 +309,7 @@ function GoGoMount:ChooseMount()
 		if addonTable.Debug then
 			self:DebugAddLine("GoGo_ChooseMount: We are a shaman and we're moving.  Changing shape form.")
 		end
-		addonTable.Shaman.ImprovedGhostWolf = select(5, GetTalentInfo(2, 3))
-		if (addonTable.Shaman.ImprovedGhostWolf == 2) then return SpellInBook(GOGO_SPELLS["SHAMAN"]) end
+		if (select(5, GetTalentInfo(2, 3)) == 2) then return SpellInBook(GOGO_SPELLS["SHAMAN"]) end
 	elseif (addonTable.Player.Class == "HUNTER") and IsMoving() then
 		if addonTable.Debug then
 			self:DebugAddLine("GoGo_ChooseMount: We are a hunter and we're moving.  Checking for aspects.")
