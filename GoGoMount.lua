@@ -279,8 +279,6 @@ function GoGo_ChooseMount()
 		if addonTable.Debug then
 			GoGo_DebugAddLine("GoGo_ChooseMount: We are a hunter and we're moving.  Checking for aspects.")
 		end --if
---		if GoGo_InBook(addonTable.Localize.AspectPack) then
---			return GoGo_InBook(addonTable.Localize.AspectPack)
 		if GoGo_InBook(addonTable.Localize.AspectCheetah) then
 			return GoGo_InBook(addonTable.Localize.AspectCheetah)
 		end --if
