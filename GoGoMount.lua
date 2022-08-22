@@ -1,6 +1,7 @@
 local addonName, addonTable = ...
 
-local GoGoMount = CreateFrame("FRAME", addonName)
+local GoGoMount = LibStub("AceAddon-3.0"):NewAddon(addonName, "AceConsole-3.0", "AceEvent-3.0")
+
 local GoGo_Panel = CreateFrame("FRAME")
 
 local function GetZoneNames(mapId)
@@ -40,12 +41,9 @@ function GoGoMount:CreateBindings()
 end
 
 ---------
-function GoGoMount:OnLoad()
+function GoGoMount:OnInitialize()
 ---------
-	SLASH_GOGOMOUNT1 = "/gogo"
-	SlashCmdList["GOGOMOUNT"] = function(msg) GoGo_OnSlash(msg) end
-	SLASH_GOGOID1 = "/id"
-	SlashCmdList["GOGOID"] = function(msg) GoGo_Msg(GoGo_Id(msg)) end
+	self:RegisterChatCommand("gogo", 'OnSlash')
 
 	self:CreateBindings()
 
@@ -54,90 +52,91 @@ function GoGoMount:OnLoad()
 	self:RegisterEvent("VARIABLES_LOADED")
 	self:RegisterEvent("UPDATE_BINDINGS")
 	self:RegisterEvent("TAXIMAP_OPENED")
-	self:RegisterEvent("CHAT_MSG_ADDON")
 	self:RegisterEvent("COMPANION_LEARNED")
 	self:RegisterEvent("PLAYER_ENTERING_WORLD")
-	self:UnregisterEvent("ADDON_LOADED")
+	self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 end --function
 
----------
-function GoGoMount:OnEvent(event, arg1)
----------
-	if event == "ADDON_LOADED" then
-		self:OnLoad()
-	elseif event == "VARIABLES_LOADED" then
-		GoGo_DebugLog = {}
-		if not GoGo_Prefs then
-			GoGo_Prefs = {}
-			GoGo_Settings_Default()
-		end --if
-
-		addonTable.TestVersion = false
-		addonTable.Debug = false
-		_, addonTable.Player.Class = UnitClass("player")
-		if (addonTable.Player.Class == "DRUID") then
-			addonTable.Druid = {}
-			self:RegisterEvent("PLAYER_REGEN_DISABLED")
-		elseif (addonTable.Player.Class == "SHAMAN") then
-			addonTable.Shaman = {}
-			self:RegisterEvent("PLAYER_REGEN_DISABLED")
-		end --if
-		GOGO_OUTLANDS = GetZoneNames(1945)..addonTable.Localize.Zone.TwistingNether
-		GOGO_NORTHREND = GetZoneNames(113)..addonTable.Localize.Zone.TheFrozenSea
-		addonTable.Player.Zone = GetRealZoneText()
-		self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-		if not GoGo_Prefs.version then
-			GoGo_Settings_Default()
-		elseif GoGo_Prefs.version ~= GetAddOnMetadata("GoGoMount", "Version") then
-			GoGo_Settings_SetUpdates()
-		end --if
-		GoGo_Panel_Options()
-		GoGo_Panel_UpdateViews()
---		GoGo_Panel_GlobalFavorites_Populate()
-		
-	elseif event == "PLAYER_REGEN_DISABLED" then
-		for i, button in ipairs({GoGoButton, GoGoButton2, GoGoButton3}) do
-			if addonTable.Player.Class == "SHAMAN" then
-				GoGo_FillButton(button, GoGo_InBook(GOGO_SPELLS["SHAMAN"]))
-			elseif addonTable.Player.Class == "DRUID" then
-				GoGo_FillButton(button, GoGo_InBook(GOGO_SPELLS["DRUID"]))
-			end --if
-		end --for
-	elseif event == "ZONE_CHANGED_NEW_AREA" then
-		addonTable.Player.Zone = GetRealZoneText()
-	elseif event == "TAXIMAP_OPENED" then
-		GoGo_Dismount()
-	elseif event == "UPDATE_BINDINGS" then
-		if not InCombatLockdown() then  -- ticket 213
-			GoGo_CheckBindings()
-		end --if
-	elseif event == "UI_ERROR_MESSAGE" then
-		if GOGO_ERRORS[arg1] and not IsFlying() then
-			GoGo_Dismount()
-		end --if
-	elseif (event == "PLAYER_ENTERING_WORLD") then
-		if addonTable.Debug then
-			GoGo_DebugAddLine("EVENT: Player Entering World")
-		end --if
-		GoGo_BuildMountSpellList()
-		GoGo_BuildMountItemList()
-		GoGo_BuildMountList()
-		GoGo_CheckFor310()
-	elseif (event == "COMPANION_LEARNED") then
-		if addonTable.Debug then
-			GoGo_DebugAddLine("EVENT: Companion Learned")
-		end --if
-		GoGo_BuildMountSpellList()
-		GoGo_BuildMountList()
-		GoGo_CheckFor310()
+function GoGoMount:VARIABLES_LOADED()
+	GoGo_DebugLog = {}
+	if not GoGo_Prefs then
+		GoGo_Prefs = {}
+		GoGo_Settings_Default()
 	end --if
-end --function
 
-GoGoMount:RegisterEvent("ADDON_LOADED")
-GoGoMount:SetScript("OnEvent", function(frame, ...) frame:OnEvent(...) end)
+	addonTable.TestVersion = false
+	addonTable.Debug = false
+	_, addonTable.Player.Class = UnitClass("player")
+	if (addonTable.Player.Class == "DRUID") then
+		addonTable.Druid = {}
+		self:RegisterEvent("PLAYER_REGEN_DISABLED")
+	elseif (addonTable.Player.Class == "SHAMAN") then
+		addonTable.Shaman = {}
+		self:RegisterEvent("PLAYER_REGEN_DISABLED")
+	end --if
+	GOGO_OUTLANDS = GetZoneNames(1945)..addonTable.Localize.Zone.TwistingNether
+	GOGO_NORTHREND = GetZoneNames(113)..addonTable.Localize.Zone.TheFrozenSea
+	addonTable.Player.Zone = GetRealZoneText()
+	if not GoGo_Prefs.version then
+		GoGo_Settings_Default()
+	elseif GoGo_Prefs.version ~= GetAddOnMetadata("GoGoMount", "Version") then
+		GoGo_Settings_SetUpdates()
+	end --if
+	GoGo_Panel_Options()
+	GoGo_Panel_UpdateViews()
+end
+
+function GoGoMount:PLAYER_REGEN_DISABLED()
+	for i, button in ipairs({GoGoButton, GoGoButton2, GoGoButton3}) do
+		if addonTable.Player.Class == "SHAMAN" then
+			GoGo_FillButton(button, GoGo_InBook(GOGO_SPELLS["SHAMAN"]))
+		elseif addonTable.Player.Class == "DRUID" then
+			GoGo_FillButton(button, GoGo_InBook(GOGO_SPELLS["DRUID"]))
+		end --if
+	end --for
+end
+
+function GoGoMount:ZONE_CHANGED_NEW_AREA()
+	addonTable.Player.Zone = GetRealZoneText()
+end
+
+function GoGoMount:TAXIMAP_OPENED()
+	GoGo_Dismount()
+end
+
+function GoGoMount:UPDATE_BINDINGS()
+	if not InCombatLockdown() then  -- ticket 213
+		GoGo_CheckBindings()
+	end --if
+end
+
+function GoGoMount:UI_ERROR_MESSAGE()
+	if GOGO_ERRORS[arg1] and not IsFlying() then
+		GoGo_Dismount()
+	end --if
+end
+
+function GoGoMount:PLAYER_ENTERING_WORLD()
+	if addonTable.Debug then
+		GoGo_DebugAddLine("EVENT: Player Entering World")
+	end --if
+	GoGo_BuildMountSpellList()
+	GoGo_BuildMountItemList()
+	GoGo_BuildMountList()
+	GoGo_CheckFor310()
+end
+
+function GoGoMount:COMPANION_LEARNED()
+	if addonTable.Debug then
+		GoGo_DebugAddLine("EVENT: Companion Learned")
+	end --if
+	GoGo_BuildMountSpellList()
+	GoGo_BuildMountList()
+	GoGo_CheckFor310()
+end
 
 ---------
-function GoGo_OnSlash(msg)
+function GoGoMount:OnSlash(msg)
 ---------
 	if GOGO_COMMANDS[string.lower(msg)] then
 		GOGO_COMMANDS[string.lower(msg)]()
@@ -244,20 +243,10 @@ function GoGo_PreClick(button)
 	end --if
 end --function
 
----------
 function GoGo_GetMount()
----------
-
 	local selectedmount = GoGo_ChooseMount()
-
---	if (addonTable.Player.Class == "PALADIN") and GoGo_Prefs.PaliUseCrusader and GoGo_InBook(addonTable.Localize.CrusaderAura) then
---		local modifier = GetSpellInfo(addonTable.Localize.CrusaderAura)
---		selectedmount = selectedmount .. "\n /stopcasting;\n /cast " .. modifier
---	end --if
-	
 	return selectedmount
-	
-end --function
+end
 
 ---------
 function GoGo_ChooseMount()
@@ -958,7 +947,7 @@ function GoGo_GetTalentInfo(talentname)
 		for talent=1, numTalents do
 			local name, _, _, _, rank, maxrank = GetTalentInfo(tab,talent)
 			if (talentname == name) then
-				if addonTable.Debug then 
+				if addonTable.Debug then
 					GoGo_DebugAddLine("GoGo_GetTalentInfo: Found " .. talentname .. " with rank " .. rank)
 				end --if
 				return rank, maxrank
@@ -1028,9 +1017,6 @@ function GoGo_CanFly()
 					end --if
 					return false
 				end --if
---				if not GoGo_CheckCoOrds("Dalaran", "VioletCitadel") then
---					return false
---				end --if
 				if not IsFlyableArea() then
 					if addonTable.Debug then
 						GoGo_DebugAddLine("GoGo_CanFly: Failed - Player in " .. GOGO_SZONE_THEVIOLETCITADEL .. " and not in flyable area.")
@@ -1038,9 +1024,6 @@ function GoGo_CanFly()
 					return false
 				end --if
 			elseif (addonTable.Player.SubZone == GOGO_SZONE_THEUNDERBELLY) then
---				if not GoGo_CheckCoOrds("Dalaran", "Underbelly") then
---					return false
---				end --if
 				if not IsFlyableArea() then
 					if addonTable.Debug then
 						GoGo_DebugAddLine("GoGo_CanFly: Failed - Player in " .. GOGO_SZONE_THEUNDERBELLY .. " and not in flyable area.")
@@ -1048,9 +1031,6 @@ function GoGo_CanFly()
 					return false
 				end --if
 			elseif (addonTable.Player.SubZone == addonTable.Localize.Zone.Dalaran) then
---				if not GoGo_CheckCoOrds("Dalaran", "Dalaran") then
---					return false
---				end --if
 				if not IsFlyableArea() then
 					if addonTable.Debug then
 						GoGo_DebugAddLine("GoGo_CanFly: Failed - Player in " .. addonTable.Localize.Zone.Dalaran .. " and not outdoors area.")
@@ -1147,26 +1127,6 @@ function GoGo_GetSkillLevel(searchname)
 			end --if
 		end --if
 	end --for
-end --function
-
----------
-function GoGo_CheckCoOrds(ZoneName, SubZoneName)
----------
-	local posX, posY = GetPlayerMapPosition("Player")
-	local CanFlyHere = false
-	local ZoneName = GoGo_FlyCoOrds[ZoneName]
-	local SubZoneName = ZoneName[SubZoneName]
-	for a = 1, table.getn(SubZoneName) or 0 do
-		if addonTable.Debug then
-			GoGo_DebugAddLine("GoGo_CheckCoOrds: Checking CoOrds " .. a)
-		end --if
-		local PointAX, PointAY, PointBX, PointBY = SubZoneName[a][1], SubZoneName[a][2], SubZoneName[a][3], SubZoneName[a][4]
-		if posX >= PointAX and posX <= PointBX and posY >= PointAY and posY <= PointBY then
-			-- we are in the rectangle a
-			return true
-		end --if
-	end --for
-	return false
 end --function
 
 ---------
@@ -1371,37 +1331,13 @@ function GoGo_DebugAddLine(LogLine)
 	
 end --function
 
----------
 function GoGo_Panel:OnLoad()
----------
---	local GoGo_Panel = CreateFrame("FRAME", nil);
---	GoGo_Panel:SetScript("OnShow",function() GoGo_Panel_UpdateViews(); end);
-	self.name = "GoGoMount"
+	self.name = addonName
 	self.okay = function (self) GoGo_Panel_Okay(); end;
 	self.default = function (self) GoGo_Settings_Default(); GoGo_Panel_UpdateViews(); end;
 	InterfaceOptions_AddCategory(self)
 	
-end --function
-
----------
-function GoGo_Panel_CurrentZoneFavorites_OnLoad(GoGo_Panel_CurrentZoneFavorites)
----------
-	GoGo_Panel_CurrentZoneFavorites.name = GOGO_STRING_CURRENTZONEFAVORITES
-	GoGo_Panel_CurrentZoneFavorites.parent = addonName
-	GoGo_Panel_CurrentZoneFavorites.okay = function (self) GoGo_Panel_Okay(); end;
-	GoGo_Panel_CurrentZoneFavorites.default = function (self) GOGO_COMMANDS["clear"](); GoGo_UpdateFavoritesTabs(); end;  -- use clear command with default button
-	InterfaceOptions_AddCategory(GoGo_Panel_CurrentZoneFavorites)
-end --function
-
----------
-function GoGo_Panel_GlobalFavorites_OnLoad(GoGo_Panel_GlobalFavorites)
----------
-	GoGo_Panel_GlobalFavorites.name = GOGO_STRING_GLOBALFAVORITES
-	GoGo_Panel_GlobalFavorites.parent = addonName
-	GoGo_Panel_GlobalFavorites.okay = function (self) GoGo_Panel_Okay(); end;
-	GoGo_Panel_GlobalFavorites.default = function (self) GOGO_COMMANDS["clear"](); GoGo_UpdateFavoritesTabs(); end;  -- use clear command with default button
-	InterfaceOptions_AddCategory(GoGo_Panel_GlobalFavorites)
-end --function
+end
 
 ---------
 function GoGo_Panel_Options()

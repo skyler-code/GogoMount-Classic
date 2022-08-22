@@ -1,8 +1,4 @@
 ﻿local _, addonTable = ...
-
-addonTable.Localize.Zone = {}
-addonTable.Localize.String = {}
-
 	addonTable.Localize.ColdWeatherFlying = 54197
 	addonTable.Localize.FastFlightForm = 40120
 	addonTable.Localize.FlightForm = 33943
