@@ -715,40 +715,31 @@ function GoGo_InBags(item)
 	end
 end
 
+local function ParseSpellbook(spell)
+	local slot = 1
+	while GetSpellBookItemName(slot, "spell") do
+		local name = GetSpellBookItemName(slot, "spell")
+		if name == spell then
+			return name
+		end
+		slot = slot + 1
+	end
+end
+
 function GoGo_InBook(spell)
 	if addonTable.Debug then
 		GoGo_DebugAddLine("GoGo_InBook: Searching for type " .. type(spell))
 	end
 	if type(spell) == "function" then
 		return spell()
-	else
-		if type(spell) == "string" then
-			if addonTable.Debug then
-				GoGo_DebugAddLine("GoGo_InBook: Searching for " .. spell)
-			end
-			local slot = 1
-			while GetSpellBookItemName(slot, "spell") do
-				local name = GetSpellBookItemName(slot, "spell")
-				if name == spell then
-					return spell
-				end
-				slot = slot + 1
-			end
-		elseif type(spell) == "number" then
-			local spellname = GetSpellInfo(spell)
-			if addonTable.Debug then
-				GoGo_DebugAddLine("GoGo_InBook: Searching for spell ID " .. spell)
-			end
-			local slot = 1
-			while GetSpellBookItemName(slot, "spell") do
-				local name = GetSpellBookItemName(slot, "spell")
-				if name == spellname then
-					return name
-				end
-				slot = slot + 1
-			end
-		end
 	end
+	if type(spell) == "number" then
+		spell = GetSpellInfo(spell)
+	end
+	if addonTable.Debug then
+		GoGo_DebugAddLine("GoGo_InBook: Searching for spell " .. spell)
+	end
+	return ParseSpellbook(spell)
 end
 
 function GoGo_IsShifted()
