@@ -76,7 +76,7 @@ local function GetSkillLevel(searchname)
 	end
 end
 
-function IsOnMapID(mapIds)
+local function IsOnMapID(mapIds)
 	if type(mapIds) ~= "table" then
 		mapIds = {mapIds}
 	end
@@ -88,6 +88,28 @@ function IsOnMapID(mapIds)
 			end
 		end
 	end
+end
+
+local function FilterMountsIn(PlayerMounts, FilterID)
+	local filteredMounts = {}
+	for _, MountID in pairs(PlayerMounts) do
+		local mountData = addonTable.MountDB[MountID]
+		if mountData and mountData[FilterID] then
+			tinsert(filteredMounts, MountID)
+		end
+	end
+	return filteredMounts
+end
+
+local function FilterMountsOut(PlayerMounts, FilterID)
+	local filteredMounts = {}
+	for _, MountID in pairs(PlayerMounts) do
+		local mountData = addonTable.MountDB[MountID]
+		if mountData and not mountData[FilterID] then
+			tinsert(filteredMounts, MountID)
+		end
+	end
+	return filteredMounts
 end
 
 function GoGoMount:CreateBindings()
@@ -389,21 +411,21 @@ function GoGoMount:ChooseMount()
 	
 	local GoGo_TempMounts = {}
 	if addonTable.EngineeringLevel < 300 then
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 45)
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 46)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 45)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 46)
 	elseif addonTable.EngineeringLevel < 375 then
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 46)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 46)
 	end
 
 	if addonTable.TailoringLevel < 300 then
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 49)
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 48)
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 47)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 49)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 48)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 47)
 	elseif addonTable.TailoringLevel < 425 then
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 49)
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 47)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 49)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 47)
 	elseif addonTable.TailoringLevel < 450 then
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 47)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 47)
 	end
 
 	if IsSwimming() then
@@ -412,28 +434,28 @@ function GoGoMount:ChooseMount()
 		end
 		addonTable.SkipFlyingMount = true
 	else
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 53)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 53)
 	end
 	
 	if addonTable.Player.Zone ~= L["Ahn'Qiraj"] then
 		if addonTable.Debug then
 			self:DebugAddLine("GoGo_ChooseMount: Removing AQ40 mounts since we are not in AQ40.")
 		end
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 50)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 50)
 	end
 
 	if addonTable.SelectPassengerMount then
 		if addonTable.Debug then
 			self:DebugAddLine("GoGo_ChooseMount: Filtering out all mounts except passenger mounts since passenger mount only was requested.")
 		end
-		GoGo_FilteredMounts = self:FilterMountsIn(GoGo_FilteredMounts, 2) or {}
+		GoGo_FilteredMounts = FilterMountsIn(GoGo_FilteredMounts, 2) or {}
 	end
 
 	if (#mounts == 0) and IsSwimming() then
 		if addonTable.Debug then
 			self:DebugAddLine("GoGo_ChooseMount: Looking for water speed increase mounts since we're in water.")
 		end
-		mounts = self:FilterMountsIn(GoGo_FilteredMounts, 5) or {}
+		mounts = FilterMountsIn(GoGo_FilteredMounts, 5) or {}
 	end
 	
 	if (#mounts == 0) and self:CanFly() and not addonTable.SkipFlyingMount then
@@ -441,15 +463,15 @@ function GoGoMount:ChooseMount()
 			self:DebugAddLine("GoGo_ChooseMount: Looking for flying mounts since we past flight checks.")
 		end
 		if addonTable.RidingLevel <= 224 then
-			GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 36)
-			GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 35)
+			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 36)
+			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 35)
 		elseif addonTable.RidingLevel >= 225 and addonTable.RidingLevel <= 299 then
-			GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 35)
+			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 35)
 		elseif addonTable.RidingLevel >= 300 then
 			-- filter nothing
 		else
-			GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 36)
-			GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 35)
+			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 36)
+			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 35)
 		end
 
 		-- Druid stuff... 
@@ -462,20 +484,20 @@ function GoGoMount:ChooseMount()
 		end
 	
 		if #mounts == 0 then
-			GoGo_TempMounts = self:FilterMountsIn(GoGo_FilteredMounts, 9)
-			mounts = self:FilterMountsIn(GoGo_TempMounts, 24)
+			GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 9)
+			mounts = FilterMountsIn(GoGo_TempMounts, 24)
 		end
 		if self.db.char.genericfastflyer then
-			local GoGo_TempMountsA = self:FilterMountsIn(GoGo_TempMounts, 23)
+			local GoGo_TempMountsA = FilterMountsIn(GoGo_TempMounts, 23)
 			if addonTable.RidingLevel <= 299 then
-				GoGo_TempMountsA = self:FilterMountsOut(GoGo_TempMountsA, 29)
+				GoGo_TempMountsA = FilterMountsOut(GoGo_TempMountsA, 29)
 			end
 			if GoGo_TempMountsA then
 				for k, v in ipairs(GoGo_TempMountsA) do
 					tinsert(mounts, v)
 				end
 			end
-			local GoGo_TempMountsA = self:FilterMountsIn(GoGo_TempMounts, 26)
+			local GoGo_TempMountsA = FilterMountsIn(GoGo_TempMounts, 26)
 			if GoGo_TempMountsA then
 				for k, v in ipairs(GoGo_TempMountsA) do
 					tinsert(mounts, v)
@@ -483,9 +505,9 @@ function GoGoMount:ChooseMount()
 			end
 		end
 		if #mounts == 0 then
-			GoGo_TempMountsA = self:FilterMountsIn(GoGo_TempMounts, 23)
+			GoGo_TempMountsA = FilterMountsIn(GoGo_TempMounts, 23)
 			if addonTable.RidingLevel <= 299 then
-				mounts = self:FilterMountsOut(GoGo_TempMountsA, 29)
+				mounts = FilterMountsOut(GoGo_TempMountsA, 29)
 			else
 				mounts = GoGo_TempMountsA
 			end
@@ -497,8 +519,8 @@ function GoGoMount:ChooseMount()
 		end
 
 		if #mounts == 0 then
-			GoGo_TempMounts = self:FilterMountsIn(GoGo_FilteredMounts, 9)
-			mounts = self:FilterMountsIn(GoGo_TempMounts, 22)
+			GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 9)
+			mounts = FilterMountsIn(GoGo_TempMounts, 22)
 		end
 
 		-- no slow flying mounts found - add druid flight if available
@@ -508,21 +530,21 @@ function GoGoMount:ChooseMount()
 	end
 	
 	if #GoGo_FilteredMounts >= 1 then
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 36)
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 35)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 36)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 35)
 	end
 
 	if #mounts == 0 and #GoGo_FilteredMounts >= 1 then  -- no flying mounts selected yet - try to use loaned mounts
-		GoGo_TempMounts = self:FilterMountsIn(GoGo_FilteredMounts, 52) or {}
+		GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 52) or {}
 		if #GoGo_TempMounts >= 1 and IsOnMapID(118, 119, 120) then
-			mounts = self:FilterMountsIn(GoGo_FilteredMounts, 52)
+			mounts = FilterMountsIn(GoGo_FilteredMounts, 52)
 		end
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 52)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 52)
 	end
 	
 	-- Set the oculus mounts as the only mounts available if we're in the oculus, not skiping flying and have them in inventory
 	if #mounts == 0 and #GoGo_FilteredMounts >= 1 and addonTable.Player.Zone == L["The Oculus"] and not addonTable.SkipFlyingMount then
-		GoGo_TempMounts = self:FilterMountsIn(GoGo_FilteredMounts, 54) or {}
+		GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 54) or {}
 		if #GoGo_TempMounts >= 1 then
 			mounts = GoGo_TempMounts
 			if addonTable.Debug then
@@ -534,7 +556,7 @@ function GoGoMount:ChooseMount()
 			end
 		end
 	else
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 54)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 54)
 		if addonTable.Debug then
 			self:DebugAddLine("GoGo_ChooseMount: Not in Oculus or forced ground mount only.")
 		end
@@ -546,34 +568,34 @@ function GoGoMount:ChooseMount()
 			self:DebugAddLine("GoGo_ChooseMount: Looking for ground mounts since we can't fly.")
 		end
 		if addonTable.RidingLevel <= 74 then
-			GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 37)
-			GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 38)
+			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 37)
+			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 38)
 		elseif addonTable.RidingLevel >= 75 and addonTable.RidingLevel <= 149 then
-			GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 37)
+			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 37)
 		end
-		GoGo_TempMounts = self:FilterMountsIn(GoGo_FilteredMounts, 21)
+		GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 21)
 		if addonTable.RidingLevel <= 149 then
-			GoGo_TempMounts = self:FilterMountsOut(GoGo_TempMounts, 29)
+			GoGo_TempMounts = FilterMountsOut(GoGo_TempMounts, 29)
 		end
 		if addonTable.RidingLevel <= 225 and self:CanFly() then
-			mounts = self:FilterMountsOut(GoGo_TempMounts, 3)
+			mounts = FilterMountsOut(GoGo_TempMounts, 3)
 		else
 			mounts = GoGo_TempMounts
 		end
 		if #mounts == 0 then
-			mounts = self:FilterMountsIn(GoGo_FilteredMounts, 20)
+			mounts = FilterMountsIn(GoGo_FilteredMounts, 20)
 		end
 		if #mounts == 0 then
-			mounts = self:FilterMountsIn(GoGo_FilteredMounts, 25)
+			mounts = FilterMountsIn(GoGo_FilteredMounts, 25)
 		end
 	end
 	
 	if #GoGo_FilteredMounts >= 1 then
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 37)
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 38)
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 21)
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 20)
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 25)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 37)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 38)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 21)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 20)
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 25)
 	end
 	
 	if #mounts == 0 then
@@ -609,28 +631,6 @@ function GoGoMount:ChooseMount()
 			return selected
 		end
 	end
-end
-
-function GoGoMount:FilterMountsOut(PlayerMounts, FilterID)
-	local filteredMounts = {}
-	for _, MountID in pairs(PlayerMounts) do
-		local mountData = addonTable.MountDB[MountID]
-		if mountData and not mountData[FilterID] then
-			tinsert(filteredMounts, MountID)
-		end
-	end
-	return filteredMounts
-end
-
-function GoGoMount:FilterMountsIn(PlayerMounts, FilterID)
-	local filteredMounts = {}
-	for _, MountID in pairs(PlayerMounts) do
-		local mountData = addonTable.MountDB[MountID]
-		if mountData and mountData[FilterID] then
-			tinsert(filteredMounts, MountID)
-		end
-	end
-	return filteredMounts
 end
 
 function GoGoMount:Dismount(button)
@@ -788,7 +788,7 @@ function GoGoMount:GetIDName(itemid)
 	if type(itemid) == "number" then
 		local GoGo_TempMount = {}
 		tinsert(GoGo_TempMount, itemid)
-		if (#self:FilterMountsIn(GoGo_TempMount, 4) == 1) then
+		if (#FilterMountsIn(GoGo_TempMount, 4) == 1) then
 			return GetItemInfo(itemid) or "Unknown Mount"
 		else
 			return GetSpellInfo(itemid) or "Unknown Mount"
@@ -798,7 +798,7 @@ function GoGoMount:GetIDName(itemid)
 			tempname = itemid[a]
 			local GoGo_TempTable = {}
 			tinsert(GoGo_TempTable, tempname)
-			if (#self:FilterMountsIn(GoGo_TempTable, 4) == 1) then
+			if (#FilterMountsIn(GoGo_TempTable, 4) == 1) then
 				if addonTable.Debug then
 					self:DebugAddLine("GoGo_GetIDName: GetItemID for " .. tempname .. GetItemInfo(tempname))
 				end
@@ -938,8 +938,8 @@ function GoGoMount:CheckFor310()  -- checks to see if any existing 310% mounts e
 		self:DebugAddLine("GoGo_CheckFor310: Function executed.")
 	end
 
-	local Find310Mounts = self:FilterMountsIn(addonTable.MountList,24)
-	Find310Mounts = self:FilterMountsIn(addonTable.MountList,6)
+	local Find310Mounts = FilterMountsIn(addonTable.MountList,24)
+	Find310Mounts = FilterMountsIn(addonTable.MountList,6)
 	for k, MountID in ipairs(Find310Mounts) do
 		addonTable.MountDB[MountID][24] = true
 		if addonTable.Debug then
