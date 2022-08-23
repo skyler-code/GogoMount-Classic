@@ -612,27 +612,25 @@ function GoGoMount:ChooseMount()
 end
 
 function GoGoMount:FilterMountsOut(PlayerMounts, FilterID)
-	local GoGo_FilteringMounts = {}
-	for k, MountID in pairs(PlayerMounts) do
-		for DBMountID, DBMountData in pairs(addonTable.MountDB) do
-			if (DBMountID == MountID) and not DBMountData[FilterID] then
-				tinsert(GoGo_FilteringMounts, MountID)
-			end
+	local filteredMounts = {}
+	for _, MountID in pairs(PlayerMounts) do
+		local mountData = addonTable.MountDB[MountID]
+		if mountData and not mountData[FilterID] then
+			tinsert(filteredMounts, MountID)
 		end
 	end
-	return GoGo_FilteringMounts
+	return filteredMounts
 end
 
 function GoGoMount:FilterMountsIn(PlayerMounts, FilterID)
-	local GoGo_FilteringMounts = {}
-	for k, MountID in pairs(PlayerMounts) do
-		for DBMountID, DBMountData in pairs(addonTable.MountDB) do
-			if (DBMountID == MountID) and DBMountData[FilterID] then
-				tinsert(GoGo_FilteringMounts, MountID)
-			end
+	local filteredMounts = {}
+	for _, MountID in pairs(PlayerMounts) do
+		local mountData = addonTable.MountDB[MountID]
+		if mountData and mountData[FilterID] then
+			tinsert(filteredMounts, MountID)
 		end
 	end
-	return GoGo_FilteringMounts
+	return filteredMounts
 end
 
 function GoGoMount:Dismount(button)
