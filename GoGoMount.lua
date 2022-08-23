@@ -471,7 +471,7 @@ function GoGoMount:ChooseMount()
 			return SpellInBook(GOGO_SPELLS["DRUID"])
 		end
 	
-		if (#mounts == 0) then
+		if #mounts == 0 then
 			GoGo_TempMounts = self:FilterMountsIn(GoGo_FilteredMounts, 9)
 			mounts = self:FilterMountsIn(GoGo_TempMounts, 24)
 		end
@@ -502,7 +502,7 @@ function GoGoMount:ChooseMount()
 		end
 
 		-- no epic flyers found - add druid swift flight if available
-		if (#mounts == 0 and (addonTable.Player.Class == "Druid") and (SpellInBook(addonTable.SpellDB.FastFlightForm))) then
+		if #mounts == 0 and addonTable.Player.Class == "Druid" and SpellInBook(addonTable.SpellDB.FastFlightForm) then
 			tinsert(mounts, addonTable.SpellDB.FastFlightForm)
 		end
 
@@ -512,18 +512,17 @@ function GoGoMount:ChooseMount()
 		end
 
 		-- no slow flying mounts found - add druid flight if available
-		if (#mounts == 0 and (addonTable.Player.Class == "Druid") and (SpellInBook(addonTable.SpellDB.FlightForm))) then
+		if #mounts == 0 and addonTable.Player.Class == "Druid" and SpellInBook(addonTable.SpellDB.FlightForm) then
 			tinsert(mounts, addonTable.SpellDB.FlightForm)
 		end
 	end
 	
-	if (#GoGo_FilteredMounts >= 1) then
-		--GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 1)
+	if #GoGo_FilteredMounts >= 1 then
 		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 36)
 		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 35)
 	end
 
-	if (#mounts == 0) and (#GoGo_FilteredMounts >= 1) then  -- no flying mounts selected yet - try to use loaned mounts
+	if #mounts == 0 and #GoGo_FilteredMounts >= 1 then  -- no flying mounts selected yet - try to use loaned mounts
 		GoGo_TempMounts = self:FilterMountsIn(GoGo_FilteredMounts, 52) or {}
 		if #GoGo_TempMounts >= 1 and IsOnMapID(118, 119, 120) then
 			mounts = self:FilterMountsIn(GoGo_FilteredMounts, 52)
@@ -532,7 +531,7 @@ function GoGoMount:ChooseMount()
 	end
 	
 	-- Set the oculus mounts as the only mounts available if we're in the oculus, not skiping flying and have them in inventory
-	if #mounts == 0 and (#GoGo_FilteredMounts >= 1) and (addonTable.Player.Zone == L["The Oculus"]) and not addonTable.SkipFlyingMount then
+	if #mounts == 0 and #GoGo_FilteredMounts >= 1 and addonTable.Player.Zone == L["The Oculus"] and not addonTable.SkipFlyingMount then
 		GoGo_TempMounts = self:FilterMountsIn(GoGo_FilteredMounts, 54) or {}
 		if #GoGo_TempMounts >= 1 then
 			mounts = GoGo_TempMounts
