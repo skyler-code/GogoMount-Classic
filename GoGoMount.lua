@@ -388,31 +388,21 @@ function GoGoMount:ChooseMount()
 	end
 	
 	local GoGo_TempMounts = {}
-	if addonTable.EngineeringLevel <= 299 then
+	if addonTable.EngineeringLevel < 300 then
 		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 45)
 		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 46)
-	elseif addonTable.EngineeringLevel >= 300 and addonTable.EngineeringLevel <= 374 then
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 46)
-	elseif addonTable.EngineeringLevel >= 375 then
-		-- filter nothing
-	else
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 45)
+	elseif addonTable.EngineeringLevel < 375 then
 		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 46)
 	end
-	if addonTable.TailoringLevel <= 299 then
+
+	if addonTable.TailoringLevel < 300 then
 		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 49)
 		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 48)
 		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 47)
-	elseif addonTable.TailoringLevel >= 300 and addonTable.TailoringLevel <= 424 then
+	elseif addonTable.TailoringLevel < 425 then
 		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 49)
 		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 47)
-	elseif addonTable.TailoringLevel >= 425 and addonTable.TailoringLevel <= 449 then
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 47)
-	elseif addonTable.TailoringLevel >= 450 then
-		-- filter nothing
-	else
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 49)
-		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 48)
+	elseif addonTable.TailoringLevel < 450 then
 		GoGo_FilteredMounts = self:FilterMountsOut(GoGo_FilteredMounts, 47)
 	end
 
