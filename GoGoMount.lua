@@ -634,9 +634,7 @@ function GoGoMount:FilterMountsOut(PlayerMounts, FilterID)
 	return GoGo_FilteringMounts
 end
 
----------
 function GoGoMount:FilterMountsIn(PlayerMounts, FilterID)
----------
 	local GoGo_FilteringMounts = {}
 	for k, MountID in pairs(PlayerMounts) do
 		for DBMountID, DBMountData in pairs(addonTable.MountDB) do
@@ -694,33 +692,18 @@ end
 
 function GoGoMount:BuildMountItemList()
 	addonTable.MountItemList = {}
-	for k, MountID in ipairs(addonTable.MountsItems) do
-		if self:InBags(MountID) then
-			if addonTable.Debug then 
-				self:DebugAddLine("GoGo_BuildMountItemList: Found mount item ID " .. MountID .. " in a bag and added to known mount list.")
-			end
-			tinsert(addonTable.MountItemList, MountID)
-		end
-	end
-	return addonTable.MountItemList
-end
-
-function GoGoMount:InBags(item)
-	if addonTable.Debug then
-		self:DebugAddLine("GoGo_InBags: Searching for " .. item)
-	end
-
 	for bag = 0, NUM_BAG_FRAMES do
 		for slot = 1, GetContainerNumSlots(bag) do
 			local itemId = GetContainerItemID(bag, slot)
-			if itemId == item then
+			if addonTable.MountsItems[itemId] then
 				if addonTable.Debug then 
-					self:DebugAddLine("GoGo_InBags: Found item ID " .. item .. " in bag " .. (bag+1) .. ", at slot " .. slot .. " and added to known mount list.")
+					self:DebugAddLine("GoGo_BuildMountItemList: Found mount item ID " .. itemId .. " in a bag and added to known mount list.")
 				end
-				return GetItemInfo(itemId)
+				tinsert(addonTable.MountItemList, itemId)
 			end
 		end
 	end
+	return addonTable.MountItemList
 end
 
 function GoGoMount:IsShifted()

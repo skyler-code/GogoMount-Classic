@@ -389,15 +389,15 @@ addonTable.MountDB = {
 }
 
 addonTable.MountsItems = {
-	33189, -- Rickety Magic Broom
-	37011, -- Magic Broom
-	33183, -- Old Magic Broom
-	33176, -- Flying Broom
-	33182, -- Swift Flying Broom
-	33184, -- Swift Magic Broom
-	44229, -- Loaned Wind Rider Reins
-	44221, -- Loaned Gryphon Reins
-	37859, -- Amber Essence
-	37860, -- Ruby Essence
-	37815, -- Emerald Essence
+	[33189] = true, -- Rickety Magic Broom
+	[37011] = true, -- Magic Broom
+	[33183] = true, -- Old Magic Broom
+	[33176] = true, -- Flying Broom
+	[33182] = true, -- Swift Flying Broom
+	[33184] = true, -- Swift Magic Broom
+	[44229] = true, -- Loaned Wind Rider Reins
+	[44221] = true, -- Loaned Gryphon Reins
+	[37859] = true, -- Amber Essence
+	[37860] = true, -- Ruby Essence
+	[37815] = true, -- Emerald Essence
 }
