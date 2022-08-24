@@ -4,7 +4,7 @@
 ## Notes: One-key solution for mounting/dismounting, supports spells, shapeshifting
 ## Author: Brues
 ## Dependencies: Ace3
-## SavedVariablesPerCharacter: GoGoMount_DB, GoGo_DebugLog
+## SavedVariablesPerCharacter: GoGoMount_DB
 ## X-OriginalVersion: Tak teh Troll @ Shadowsong EU
 
 locales.xml

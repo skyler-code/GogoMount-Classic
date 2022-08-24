@@ -7,8 +7,11 @@ local IsMounted, CanExitVehicle, GetMinimapZoneText, UnitBuff, GetUnitSpeed, Get
 	IsMounted, CanExitVehicle, GetMinimapZoneText, UnitBuff, GetUnitSpeed, GetNumSkillLines, GetSkillLineInfo, GetSpellBookItemName
 local C_Map = C_Map
 
-local GoGoMount = LibStub("AceAddon-3.0"):NewAddon(addonName, "AceConsole-3.0", "AceEvent-3.0")
+ GoGoMount = LibStub("AceAddon-3.0"):NewAddon(addonName, "AceConsole-3.0", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
+
+local playerZone, playerSubZone
+local _, playerClass = UnitClass("player")
 
 
 local savedDBDefaults = {
@@ -31,31 +34,30 @@ local function parseForItemId(msg)
 	return idtype, tonumber(itemid)
 end
 
-local function ParseSpellbook(spell)
-	local slot = 1
-	while GetSpellBookItemName(slot, "spell") do
-		local name = GetSpellBookItemName(slot, "spell")
-		if name == spell then
-			return name
+function GoGoMount:ParseSpellbook()
+	self.playerSpellbook = {}
+	for i = 1, GetNumSpellTabs() do
+		local offset, numSlots = select(3, GetSpellTabInfo(i))
+		for j = offset+1, offset+numSlots do
+			local spellName, _, spellID = GetSpellBookItemName(j, BOOKTYPE_SPELL)
+			self.playerSpellbook[spellID] = spellName
 		end
-		slot = slot + 1
 	end
 end
 
-local function SpellInBook(spell)
-	if addonTable.Debug then
-		GoGoMount:DebugAddLine("SpellInBook: Searching for type " .. type(spell))
-	end
+function GoGoMount:SpellInBook(spell)
 	if type(spell) == "function" then
+		self:DebugAddLine("Running spell function")
 		return spell()
 	end
-	if type(spell) == "number" then
-		spell = GetSpellInfo(spell)
-	end
 	if addonTable.Debug then
-		GoGoMount:DebugAddLine("SpellInBook: Searching for spell " .. spell)
+		self:DebugAddLine("Searching for spell", GetSpellInfo(spell), spell)
 	end
-	return ParseSpellbook(spell)
+	local spellInBook = self.playerSpellbook[spell]
+	if spellInBook then
+		self:DebugAddLine("Found spell", spellInBook)
+		return spellInBook
+	end
 end
 
 local function IsMoving()
@@ -135,7 +137,13 @@ function GoGoMount:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New(addonName.."DB", savedDBDefaults)
 	self:RegisterChatCommand("gogo", 'OnSlash')
 
-	self:CreateBindings()
+	addonTable.TestVersion = false
+	addonTable.Debug = true
+	playerZone = GetRealZoneText()
+	playerSubZone = GetSubZoneText()
+
+	self:ParseSpellbook()
+	self:SetClassSpell()
 
 	-- Register our options
 	LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(addonName, self:GetOptions())
@@ -144,34 +152,53 @@ function GoGoMount:OnInitialize()
 	self:RegisterEvent("VARIABLES_LOADED")
 	self:RegisterEvent("UPDATE_BINDINGS")
 	self:RegisterEvent("TAXIMAP_OPENED")
-	self:RegisterEvent("COMPANION_LEARNED")
+	self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+	self:RegisterEvent("BAG_UPDATE")
 	self:RegisterEvent("PLAYER_ENTERING_WORLD")
 	self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+	self:RegisterEvent("SPELLS_CHANGED")
 end
 
 function GoGoMount:VARIABLES_LOADED()
-	GoGo_DebugLog = {}
-	addonTable.TestVersion = false
-	addonTable.Debug = false
-	_, addonTable.Player.Class = UnitClass("player")
-	if addonTable.Player.Class == "DRUID" or addonTable.Player.Class == "SHAMAN" then
-		self:RegisterEvent("PLAYER_REGEN_DISABLED")
-	end
-	addonTable.Player.Zone = GetRealZoneText()
+	self:CreateBindings()
 end
 
 function GoGoMount:PLAYER_REGEN_DISABLED()
 	for i, button in ipairs({GoGoButton1, GoGoButton2, GoGoButton3}) do
-		if addonTable.Player.Class == "SHAMAN" then
-			self:FillButton(button, SpellInBook(GOGO_SPELLS["SHAMAN"]))
-		elseif addonTable.Player.Class == "DRUID" then
-			self:FillButton(button, SpellInBook(GOGO_SPELLS["DRUID"]))
+		if self.classSpell then
+			self:FillButton(button, self:SpellInBook(self.classSpell))
 		end
 	end
 end
 
+function GoGoMount:BAG_UPDATE()
+	self:BuildMountItemList()
+	self:BuildMountList()
+end
+
+function GoGoMount:SPELLS_CHANGED()
+	self:ParseSpellbook()
+end
+
+function GoGoMount:UNIT_SPELLCAST_SUCCEEDED(event, unitId, _, spellId)
+	if unitId == 'player' and spellId == 55884 then
+		if addonTable.Debug then
+			self:DebugAddLine("EVENT: Companion Learned")
+		end
+		self:BuildMountSpellList()
+		self:BuildMountList()
+		self:CheckFor310()
+	end
+end
+
 function GoGoMount:ZONE_CHANGED_NEW_AREA()
-	addonTable.Player.Zone = GetRealZoneText()
+	playerZone = GetRealZoneText()
+	playerSubZone = GetSubZoneText()
+end
+
+function GoGoMount:ZONE_CHANGED()
+	playerZone = GetRealZoneText()
+	playerSubZone = GetSubZoneText()
 end
 
 function GoGoMount:TAXIMAP_OPENED()
@@ -200,15 +227,6 @@ function GoGoMount:PLAYER_ENTERING_WORLD()
 	self:CheckFor310()
 end
 
-function GoGoMount:COMPANION_LEARNED()
-	if addonTable.Debug then
-		self:DebugAddLine("EVENT: Companion Learned")
-	end
-	self:BuildMountSpellList()
-	self:BuildMountList()
-	self:CheckFor310()
-end
-
 function GoGoMount:OnSlash(msg)
 	if GOGO_COMMANDS[string.lower(msg)] then
 		GOGO_COMMANDS[string.lower(msg)](self)
@@ -226,62 +244,62 @@ function GoGoMount:OnSlash(msg)
 		self:Msg("genericfastflyer")
 		self:Msg("updatenotice")
 		self:Msg("mountnotice")
-		if addonTable.Player.Class == "DRUID" then self:Msg("druidclickform") end
-		if addonTable.Player.Class == "DRUID" then self:Msg("druidflightform") end
+		if playerClass == "DRUID" then self:Msg("druidclickform") end
+		if playerClass == "DRUID" then self:Msg("druidflightform") end
 		self:Msg("pref")
 	end
 end
 
 function GoGoMount:PreClick(button)
 	if addonTable.Debug then
-		self:DebugAddLine("GoGo_PreClick: Starts")
-		self:DebugAddLine("GoGo_PreClick: Location = " .. GetRealZoneText() .. " - " .. GetZoneText() .. " - " ..GetSubZoneText() .. " - " .. GetMinimapZoneText())
-		self:DebugAddLine("GoGo_PreClick: Current unit speed is " .. GetUnitSpeed("player"))
+		self:DebugAddLine("Starts")
+		self:DebugAddLine("Location = " .. GetRealZoneText() .. " - " .. GetZoneText() .. " - " ..GetSubZoneText() .. " - " .. GetMinimapZoneText())
+		self:DebugAddLine("Current unit speed is " .. GetUnitSpeed("player"))
 		local level = UnitLevel("player")
-		self:DebugAddLine("GoGo_PreClick: We are level " .. level)
-		self:DebugAddLine("GoGo_PreClick: We are a " .. addonTable.Player.Class)
+		self:DebugAddLine("We are level " .. level)
+		self:DebugAddLine("We are a " .. playerClass)
 		if self:CanFly() then
-			self:DebugAddLine("GoGo_PreClick: We can fly here as per self:CanFly()")
+			self:DebugAddLine("We can fly here as per self:CanFly()")
 		else
-			self:DebugAddLine("GoGo_PreClick: We can not fly here as per self:CanFly()")
+			self:DebugAddLine("We can not fly here as per self:CanFly()")
 		end
 		if IsOutdoors() then
-			self:DebugAddLine("GoGo_PreClick: We are outdoors as per IsOutdoors()")
+			self:DebugAddLine("We are outdoors as per IsOutdoors()")
 		else
-			self:DebugAddLine("GoGo_PreClick: We are not outdoors as per IsOutdoors()")
+			self:DebugAddLine("We are not outdoors as per IsOutdoors()")
 		end
 		if IsIndoors() then
-			self:DebugAddLine("GoGo_PreClick: We are indoors as per IsIndoors()")
+			self:DebugAddLine("We are indoors as per IsIndoors()")
 		else
-			self:DebugAddLine("GoGo_PreClick: We are not indoors as per IsIndoors()")
+			self:DebugAddLine("We are not indoors as per IsIndoors()")
 		end
 		if IsFlyableArea() then
-			self:DebugAddLine("GoGo_PreClick: We can fly here as per IsFlyableArea()")
+			self:DebugAddLine("We can fly here as per IsFlyableArea()")
 		else
-			self:DebugAddLine("GoGo_PreClick: We can not fly here as per IsFlyableArea()")
+			self:DebugAddLine("We can not fly here as per IsFlyableArea()")
 		end
 		if IsFlying() then
-			self:DebugAddLine("GoGo_PreClick: We are flying as per IsFlying()")
+			self:DebugAddLine("We are flying as per IsFlying()")
 		else
-			self:DebugAddLine("GoGo_PreClick: We are not flying as per IsFlying()")
+			self:DebugAddLine("We are not flying as per IsFlying()")
 		end
 		if IsSwimming() then
-			self:DebugAddLine("GoGo_PreClick: We are swimming as per IsSwimming()")
+			self:DebugAddLine("We are swimming as per IsSwimming()")
 		else
-			self:DebugAddLine("GoGo_PreClick: We are not swimming as per IsSwimming()")
+			self:DebugAddLine("We are not swimming as per IsSwimming()")
 		end
 		if IsFalling() then
-			self:DebugAddLine("GoGo_PreClick: We are falling as per IsFalling()")
+			self:DebugAddLine("We are falling as per IsFalling()")
 		else
-			self:DebugAddLine("GoGo_PreClick: We are not falling as per IsFalling()")
+			self:DebugAddLine("We are not falling as per IsFalling()")
 		end
 		if IsMoving() then
-			self:DebugAddLine("GoGo_PreClick: We are moving as per IsMoving()")
+			self:DebugAddLine("We are moving as per IsMoving()")
 		else
-			self:DebugAddLine("GoGo_PreClick: We are not moving as per IsMoving()")
+			self:DebugAddLine("We are not moving as per IsMoving()")
 		end
 		local position = C_Map.GetPlayerMapPosition(C_Map.GetBestMapForUnit("player"), "player")
-		self:DebugAddLine("GoGo_PreClick: Player location: X = ".. position.x .. ", Y = " .. position.y)
+		self:DebugAddLine("Player location: X = ".. position.x .. ", Y = " .. position.y)
 	end
 
 	if not InCombatLockdown() then
@@ -290,22 +308,22 @@ function GoGoMount:PreClick(button)
 
 	if IsMounted() or CanExitVehicle() then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_PreClick: Player is mounted and is being dismounted.")
+			self:DebugAddLine("Player is mounted and is being dismounted.")
 		end
 		self:Dismount()
-	elseif addonTable.Player.Class == "DRUID" and self:IsShifted() and not InCombatLockdown() then
+	elseif playerClass == "DRUID" and self:IsShifted() and not InCombatLockdown() then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_PreClick: Player is a druid, is shifted and not in combat.")
+			self:DebugAddLine("Player is a druid, is shifted and not in combat.")
 		end
 		self:Dismount(button)
-	elseif addonTable.Player.Class == "SHAMAN" and UnitBuff("player", addonTable.SpellDB.GhostWolf) then
+	elseif playerClass == "SHAMAN" and UnitBuff("player", addonTable.SpellDB.GhostWolf) then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_PreClick: Player is a shaman and is in wolf form.")
+			self:DebugAddLine("Player is a shaman and is in wolf form.")
 		end
 		self:Dismount()
 	elseif not InCombatLockdown() then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_PreClick: Player not in combat, button pressed, looking for a mount.")
+			self:DebugAddLine("Player not in combat, button pressed, looking for a mount.")
 		end
 		self:FillButton(button, self:GetMount())
 	end
@@ -317,92 +335,88 @@ function GoGoMount:GetMount()
 end
 
 function GoGoMount:ChooseMount()
-	if (addonTable.Player.Class == "DRUID") then
+	if playerClass == "DRUID" then
 		if IsIndoors() then
 			if IsSwimming() then
-				return SpellInBook(addonTable.SpellDB.AquaForm)
+				return self:SpellInBook(addonTable.SpellDB.AquaForm)
 			elseif select(5, GetTalentInfo(2, 12)) > 0 then
-				return SpellInBook(addonTable.SpellDB.CatForm)
+				return self:SpellInBook(addonTable.SpellDB.CatForm)
 			end
 			return
 		end
 		if (IsSwimming() or IsFalling() or IsMoving()) then
 			if addonTable.Debug then
-				self:DebugAddLine("GoGo_ChooseMount: We are a druid and we're falling, swimming or moving.  Changing shape form.")
+				self:DebugAddLine("We are a druid and we're falling, swimming or moving.  Changing shape form.")
 			end
-			return SpellInBook(GOGO_SPELLS["DRUID"])
+			return self:SpellInBook(self.classSpell)
 		end
-	elseif (addonTable.Player.Class == "SHAMAN") and IsMoving() then
+	elseif playerClass == "SHAMAN" and IsMoving() then
+		if select(5, GetTalentInfo(2, 3)) == 2 then
+			if addonTable.Debug then
+				self:DebugAddLine("We are a shaman and we're moving.  Changing shape form.")
+			end
+			return self:SpellInBook(self.classSpell)
+		end
+	elseif playerClass == "HUNTER" and IsMoving() then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_ChooseMount: We are a shaman and we're moving.  Changing shape form.")
+			self:DebugAddLine("We are a hunter and we're moving.  Checking for aspects.")
 		end
-		if (select(5, GetTalentInfo(2, 3)) == 2) then return SpellInBook(GOGO_SPELLS["SHAMAN"]) end
-	elseif (addonTable.Player.Class == "HUNTER") and IsMoving() then
-		if addonTable.Debug then
-			self:DebugAddLine("GoGo_ChooseMount: We are a hunter and we're moving.  Checking for aspects.")
-		end
-		if SpellInBook(addonTable.SpellDB.AspectCheetah) then
-			return SpellInBook(addonTable.SpellDB.AspectCheetah)
+		if self:SpellInBook(addonTable.SpellDB.AspectCheetah) then
+			return self:SpellInBook(addonTable.SpellDB.AspectCheetah)
 		end
 	end
 
 	if addonTable.Debug then
-		self:DebugAddLine("GoGo_ChooseMount: Passed Druid / Shaman forms - nothing selected.")
+		self:DebugAddLine("Passed Druid / Shaman forms - nothing selected.")
 	end
 
 	local mounts = {}
 	local GoGo_FilteredMounts = {}
-	addonTable.Player.Zone = GetRealZoneText()
 	addonTable.EngineeringLevel = GetSkillLevel(addonTable.SpellDB.Engineering) or 0
 	addonTable.TailoringLevel = GetSkillLevel(addonTable.SpellDB.Tailoring) or 0
 	addonTable.RidingLevel = GetSkillLevel(L["Riding"]) or 0
 	
 	if addonTable.Debug then
-		self:DebugAddLine("GoGo_ChooseMount: " .. GetSpellInfo(addonTable.SpellDB.Engineering) .. " = "..addonTable.EngineeringLevel)
-		self:DebugAddLine("GoGo_ChooseMount: " .. GetSpellInfo(addonTable.SpellDB.Tailoring) .. " = "..addonTable.TailoringLevel)
-		self:DebugAddLine("GoGo_ChooseMount: " .. L["Riding"] .. " = "..addonTable.RidingLevel)
+		self:DebugAddLine(GetSpellInfo(addonTable.SpellDB.Engineering) .. " = "..addonTable.EngineeringLevel)
+		self:DebugAddLine(GetSpellInfo(addonTable.SpellDB.Tailoring) .. " = "..addonTable.TailoringLevel)
+		self:DebugAddLine(L["Riding"] .. " = "..addonTable.RidingLevel)
 	end
 
-	if (#mounts == 0) then
-		if self.db.char.FilteredZones[addonTable.Player.Zone] then
-			GoGo_FilteredMounts = self.db.char.FilteredZones[addonTable.Player.Zone]
+	if #mounts == 0 then
+		if self.db.char.FilteredZones[playerZone] then
+			GoGo_FilteredMounts = self.db.char.FilteredZones[playerZone]
 		end
 	end
 	if addonTable.Debug then
-		self:DebugAddLine("GoGo_ChooseMount: Checked for zone favorites.")
+		self:DebugAddLine("Checked for zone favorites.")
 	end
 
-	if (#mounts == 0) and not GoGo_FilteredMounts or (#GoGo_FilteredMounts == 0) then
+	if #mounts == 0 and not GoGo_FilteredMounts or #GoGo_FilteredMounts == 0 then
 		if self.db.char.GlobalPrefMounts then
 			GoGo_FilteredMounts = self.db.char.GlobalPrefMounts
 		end
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_ChooseMount: Checked for global favorites.")
+			self:DebugAddLine("Checked for global favorites.")
 		end
 	end
 
-	if (#mounts == 0) and not GoGo_FilteredMounts or (#GoGo_FilteredMounts == 0) then
+	if #mounts == 0 and not GoGo_FilteredMounts or #GoGo_FilteredMounts == 0 then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_ChooseMount: Checking for spell and item mounts.")
+			self:DebugAddLine("Checking for spell and item mounts.")
 		end
 		-- Not updating bag items on bag changes right now so scan and update list
 		self:BuildMountItemList()
 		self:BuildMountList()
 		GoGo_FilteredMounts = addonTable.MountList
-		if not GoGo_FilteredMounts or (#GoGo_FilteredMounts == 0) then
-			if addonTable.Player.Class == "SHAMAN" then
+		if not GoGo_FilteredMounts or #GoGo_FilteredMounts == 0 then
+			if self.classSpell then
 				if addonTable.Debug then
-					self:DebugAddLine("GoGo_ChooseMount: No mounts found. Forcing shaman shape form.")
+					self:DebugAddLine("No mounts found. Forcing "..playerClass.." shape form.")
 				end
-				return SpellInBook(GOGO_SPELLS["SHAMAN"])
-			elseif addonTable.Player.Class == "DRUID" then
-				if addonTable.Debug then
-					self:DebugAddLine("GoGo_ChooseMount: No mounts found. Forcing druid shape form.")
-				end
-				return SpellInBook(GOGO_SPELLS["DRUID"])
+				return self:SpellInBook(playerClass)
 			else
 				if addonTable.Debug then
-					self:DebugAddLine("GoGo_ChooseMount: No mounts found.  Giving up the search.")
+					self:DebugAddLine("No mounts found.  Giving up the search.")
 				end
 				return nil
 			end
@@ -410,77 +424,71 @@ function GoGoMount:ChooseMount()
 	end
 	
 	local GoGo_TempMounts = {}
-	if addonTable.EngineeringLevel < 300 then
-		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 45)
-		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 46)
-	elseif addonTable.EngineeringLevel < 375 then
+	if addonTable.EngineeringLevel < 375 then
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 46)
 	end
+	if addonTable.EngineeringLevel < 300 then
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 45)
+	end
 
+	if addonTable.TailoringLevel < 450 then
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 47)
+	end
+	if addonTable.TailoringLevel < 425 then
+		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 49)
+	end
 	if addonTable.TailoringLevel < 300 then
-		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 49)
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 48)
-		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 47)
-	elseif addonTable.TailoringLevel < 425 then
-		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 49)
-		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 47)
-	elseif addonTable.TailoringLevel < 450 then
-		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 47)
 	end
 
 	if IsSwimming() then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_ChooseMount: Forcing ground mounts because we're swimming.")
+			self:DebugAddLine("Forcing ground mounts because we're swimming.")
 		end
 		addonTable.SkipFlyingMount = true
 	else
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 53)
 	end
 	
-	if addonTable.Player.Zone ~= L["Ahn'Qiraj"] then
+	if playerZone ~= L["Ahn'Qiraj"] then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_ChooseMount: Removing AQ40 mounts since we are not in AQ40.")
+			self:DebugAddLine("Removing AQ40 mounts since we are not in AQ40.")
 		end
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 50)
 	end
 
 	if addonTable.SelectPassengerMount then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_ChooseMount: Filtering out all mounts except passenger mounts since passenger mount only was requested.")
+			self:DebugAddLine("Filtering out all mounts except passenger mounts since passenger mount only was requested.")
 		end
 		GoGo_FilteredMounts = FilterMountsIn(GoGo_FilteredMounts, 2) or {}
 	end
 
-	if (#mounts == 0) and IsSwimming() then
+	if #mounts == 0 and IsSwimming() then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_ChooseMount: Looking for water speed increase mounts since we're in water.")
+			self:DebugAddLine("Looking for water speed increase mounts since we're in water.")
 		end
 		mounts = FilterMountsIn(GoGo_FilteredMounts, 5) or {}
 	end
 	
-	if (#mounts == 0) and self:CanFly() and not addonTable.SkipFlyingMount then
+	if #mounts == 0 and self:CanFly() and not addonTable.SkipFlyingMount then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_ChooseMount: Looking for flying mounts since we past flight checks.")
+			self:DebugAddLine("Looking for flying mounts since we past flight checks.")
 		end
-		if addonTable.RidingLevel <= 224 then
+		if addonTable.RidingLevel < 225 then
 			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 36)
-			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 35)
-		elseif addonTable.RidingLevel >= 225 and addonTable.RidingLevel <= 299 then
-			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 35)
-		elseif addonTable.RidingLevel >= 300 then
-			-- filter nothing
-		else
-			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 36)
+		end
+		if addonTable.RidingLevel < 300 then
 			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 35)
 		end
 
 		-- Druid stuff... 
 		-- Use flight forms if preferred
-		if addonTable.Player.Class == "DRUID" and (SpellInBook(addonTable.SpellDB.FastFlightForm) or SpellInBook(addonTable.SpellDB.FlightForm)) and self.db.char.DruidFlightForm then
+		if playerClass == "DRUID" and (self:SpellInBook(addonTable.SpellDB.FastFlightForm) or self:SpellInBook(addonTable.SpellDB.FlightForm)) and self.db.char.DruidFlightForm then
 			if addonTable.Debug then
-				self:DebugAddLine("GoGo_ChooseMount: Druid with preferred flight forms option enabled.  Using flight form.")
+				self:DebugAddLine("Druid with preferred flight forms option enabled.  Using flight form.")
 			end
-			return SpellInBook(GOGO_SPELLS["DRUID"])
+			return self:SpellInBook(self.classSpell)
 		end
 	
 		if #mounts == 0 then
@@ -489,7 +497,7 @@ function GoGoMount:ChooseMount()
 		end
 		if self.db.char.genericfastflyer then
 			local GoGo_TempMountsA = FilterMountsIn(GoGo_TempMounts, 23)
-			if addonTable.RidingLevel <= 299 then
+			if addonTable.RidingLevel < 300 then
 				GoGo_TempMountsA = FilterMountsOut(GoGo_TempMountsA, 29)
 			end
 			if GoGo_TempMountsA then
@@ -506,7 +514,7 @@ function GoGoMount:ChooseMount()
 		end
 		if #mounts == 0 then
 			GoGo_TempMountsA = FilterMountsIn(GoGo_TempMounts, 23)
-			if addonTable.RidingLevel <= 299 then
+			if addonTable.RidingLevel < 300 then
 				mounts = FilterMountsOut(GoGo_TempMountsA, 29)
 			else
 				mounts = GoGo_TempMountsA
@@ -514,7 +522,7 @@ function GoGoMount:ChooseMount()
 		end
 
 		-- no epic flyers found - add druid swift flight if available
-		if #mounts == 0 and addonTable.Player.Class == "Druid" and SpellInBook(addonTable.SpellDB.FastFlightForm) then
+		if #mounts == 0 and playerClass == "DRUID" and self:SpellInBook(addonTable.SpellDB.FastFlightForm) then
 			tinsert(mounts, addonTable.SpellDB.FastFlightForm)
 		end
 
@@ -524,7 +532,7 @@ function GoGoMount:ChooseMount()
 		end
 
 		-- no slow flying mounts found - add druid flight if available
-		if #mounts == 0 and addonTable.Player.Class == "Druid" and SpellInBook(addonTable.SpellDB.FlightForm) then
+		if #mounts == 0 and playerClass == "DRUID" and self:SpellInBook(addonTable.SpellDB.FlightForm) then
 			tinsert(mounts, addonTable.SpellDB.FlightForm)
 		end
 	end
@@ -543,38 +551,38 @@ function GoGoMount:ChooseMount()
 	end
 	
 	-- Set the oculus mounts as the only mounts available if we're in the oculus, not skiping flying and have them in inventory
-	if #mounts == 0 and #GoGo_FilteredMounts >= 1 and addonTable.Player.Zone == L["The Oculus"] and not addonTable.SkipFlyingMount then
+	if #mounts == 0 and #GoGo_FilteredMounts >= 1 and playerZone == L["The Oculus"] and not addonTable.SkipFlyingMount then
 		GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 54) or {}
 		if #GoGo_TempMounts >= 1 then
 			mounts = GoGo_TempMounts
 			if addonTable.Debug then
-				self:DebugAddLine("GoGo_ChooseMount: In the Oculus, Oculus only mount found, using.")
+				self:DebugAddLine("In the Oculus, Oculus only mount found, using.")
 			end
 		else
 			if addonTable.Debug then
-				self:DebugAddLine("GoGo_ChooseMount: In the Oculus, no oculus mount found in inventory.")
+				self:DebugAddLine("In the Oculus, no oculus mount found in inventory.")
 			end
 		end
 	else
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 54)
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_ChooseMount: Not in Oculus or forced ground mount only.")
+			self:DebugAddLine("Not in Oculus or forced ground mount only.")
 		end
 	end
 	
 	-- Select ground mounts
 	if #mounts == 0 and self:CanRide() then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_ChooseMount: Looking for ground mounts since we can't fly.")
+			self:DebugAddLine("Looking for ground mounts since we can't fly.")
 		end
-		if addonTable.RidingLevel <= 74 then
+		if addonTable.RidingLevel < 75 then
 			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 37)
 			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 38)
-		elseif addonTable.RidingLevel >= 75 and addonTable.RidingLevel <= 149 then
+		elseif addonTable.RidingLevel < 150 then
 			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 37)
 		end
 		GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 21)
-		if addonTable.RidingLevel <= 149 then
+		if addonTable.RidingLevel < 150 then
 			GoGo_TempMounts = FilterMountsOut(GoGo_TempMounts, 29)
 		end
 		if addonTable.RidingLevel <= 225 and self:CanFly() then
@@ -598,10 +606,8 @@ function GoGoMount:ChooseMount()
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 25)
 	end
 	
-	if #mounts == 0 then
-		if (addonTable.Player.Class == "SHAMAN") and (SpellInBook(addonTable.SpellDB.GhostWolf)) then
-			tinsert(mounts, addonTable.SpellDB.GhostWolf)
-		end
+	if #mounts == 0 and playerClass == "SHAMAN" and self:SpellInBook(addonTable.SpellDB.GhostWolf) then
+		tinsert(mounts, addonTable.SpellDB.GhostWolf)
 	end
 
 	if self.db.char.GlobalIgnoreMounts and #self.db.char.GlobalIgnoreMounts > 0 then
@@ -617,13 +623,13 @@ function GoGoMount:ChooseMount()
 	if #mounts >= 1 then
 		if addonTable.Debug then
 			for a = 1, #mounts do
-				self:DebugAddLine("GoGo_ChooseMount: Found mount " .. mounts[a] .. " - included in random pick.")
+				self:DebugAddLine("Found mount", mounts[a], "- included in random pick.")
 			end
 		end
 		selected = mounts[math.random(#mounts)]
 		if type(selected) == "string" then
 			if addonTable.Debug then
-				self:DebugAddLine("GoGo_ChooseMount: Selected string " .. selected)
+				self:DebugAddLine("Selected string", selected)
 			end
 			return selected
 		else
@@ -638,25 +644,23 @@ function GoGoMount:Dismount(button)
 		Dismount()
 	elseif CanExitVehicle() then	
 		VehicleExit()
-	elseif addonTable.Player.Class == "DRUID" then
-		if self:IsShifted() and button then
+	elseif playerClass == "DRUID" then
+		local isShifted = self:IsShifted()
+		if button and isShifted then
 			if self.db.char.DruidClickForm and not IsFlying() then
 				self:FillButton(button, self:GetMount())
 			else
-				self:FillButton(button, self:IsShifted())
+				self:FillButton(button, isShifted)
 			end
 		end
-	elseif addonTable.Player.Class == "SHAMAN" and UnitBuff("player", SpellInBook(addonTable.SpellDB.GhostWolf)) then
-		CancelUnitBuff("player", SpellInBook(addonTable.SpellDB.GhostWolf))
-	else
-		return nil
+	elseif playerClass == "SHAMAN" and UnitBuff("player", self:SpellInBook(addonTable.SpellDB.GhostWolf)) then
+		CancelUnitBuff("player", self:SpellInBook(addonTable.SpellDB.GhostWolf))
 	end
-	return true
 end
 
 function GoGoMount:BuildMountList()
 	addonTable.MountList = {}
-	for _, v in pairs(addonTable.MountSpellList) do
+	for _, v in pairs(addonTable.MountSpellList or {}) do
 		tinsert(addonTable.MountList, v)
 	end
 	for _, v in pairs(addonTable.MountItemList) do
@@ -667,10 +671,10 @@ end
 
 function GoGoMount:BuildMountSpellList()
 	addonTable.MountSpellList = {}
-	for slot = 1, GetNumCompanions("MOUNT"),1 do
+	for slot = 1, GetNumCompanions("MOUNT") do
 		local _, _, SpellID = GetCompanionInfo("MOUNT", slot)
 		if addonTable.Debug then 
-			self:DebugAddLine("GoGo_BuildMountSpellList: Found mount spell ID " .. SpellID .. " at slot " .. slot .. " and added to known mount list.")
+			self:DebugAddLine("Found mount spell ID " .. SpellID .. " at slot " .. slot .. " and added to known mount list.")
 		end
 		tinsert(addonTable.MountSpellList, SpellID)
 	end
@@ -684,7 +688,7 @@ function GoGoMount:BuildMountItemList()
 			local itemId = GetContainerItemID(bag, slot)
 			if addonTable.MountsItems[itemId] then
 				if addonTable.Debug then 
-					self:DebugAddLine("GoGo_BuildMountItemList: Found mount item ID " .. itemId .. " in a bag and added to known mount list.")
+					self:DebugAddLine("Found mount item ID " .. itemId .. " in a bag and added to known mount list.")
 				end
 				tinsert(addonTable.MountItemList, itemId)
 			end
@@ -694,19 +698,17 @@ function GoGoMount:BuildMountItemList()
 end
 
 function GoGoMount:IsShifted()
-	if addonTable.Debug then
-		self:DebugAddLine("GoGo_IsShifted:  GoGo_IsShifted starting")
-	end
 	for i = 1, GetNumShapeshiftForms() do
 		local _, active, _, spellID = GetShapeshiftFormInfo(i)
 		if active then
 			local name = GetSpellInfo(spellID)
 			if addonTable.Debug then
-				self:DebugAddLine("GoGo_IsShifted: Found " .. name)
+				self:DebugAddLine("Found", name)
 			end
-			return name
+			return name, spellID
 		end
 	end
+	self:DebugAddLine("Not shifted")
 end
 
 function GoGoMount:GlobalIgnoreMountExists(spell)
@@ -727,22 +729,21 @@ end
 
 function GoGoMount:AddPrefMount(spell)
 	if addonTable.Debug then 
-		self:DebugAddLine("GoGo_AddPrefMount: Preference " .. spell)
+		self:DebugAddLine("Preference " .. spell)
 	end
 
 	if not self.db.char.GlobalPrefMount then
-		addonTable.Player.Zone = GetRealZoneText()
-		if not self.db.char.FilteredZones[addonTable.Player.Zone] then self.db.char.FilteredZones[addonTable.Player.Zone] = {} end
-		tinsert(self.db.char.FilteredZones[addonTable.Player.Zone], spell)
-		if #self.db.char.FilteredZones[addonTable.Player.Zone] > 1 then
+		if not self.db.char.FilteredZones[playerZone] then self.db.char.FilteredZones[playerZone] = {} end
+		tinsert(self.db.char.FilteredZones[playerZone], spell)
+		if #self.db.char.FilteredZones[playerZone] > 1 then
 			local i = 2
 			repeat
-				if self.db.char.FilteredZones[addonTable.Player.Zone][i] == self.db.char.FilteredZones[addonTable.Player.Zone][i - 1] then
-					tremove(self.db.char.FilteredZones[addonTable.Player.Zone], i)
+				if self.db.char.FilteredZones[playerZone][i] == self.db.char.FilteredZones[playerZone][i - 1] then
+					tremove(self.db.char.FilteredZones[playerZone], i)
 				else
 					i = i + 1
 				end
-			until i > #self.db.char.FilteredZones[addonTable.Player.Zone]
+			until i > #self.db.char.FilteredZones[playerZone]
 		end
 	else
 		if not self.db.char.GlobalPrefMounts then self.db.char.GlobalPrefMounts = {} end
@@ -764,7 +765,7 @@ end
 
 function GoGoMount:AddIgnoreMount(spell)
 		if addonTable.Debug then 
-			self:DebugAddLine("GoGo_AddPrefMount: Preference " .. spell)
+			self:DebugAddLine("Preference " .. spell)
 		end
 		if not self.db.char.GlobalIgnoreMounts then self.db.char.GlobalIgnoreMounts = {} end
 		if not self:GlobalIgnoreMountExists(spell) then
@@ -783,44 +784,30 @@ function GoGoMount:AddIgnoreMount(spell)
 end
 
 function GoGoMount:GetIDName(itemid)
-	local tempname = ""
-	local ItemName = ""
-	if type(itemid) == "number" then
-		local GoGo_TempMount = {}
-		tinsert(GoGo_TempMount, itemid)
-		if (#FilterMountsIn(GoGo_TempMount, 4) == 1) then
-			return GetItemInfo(itemid) or "Unknown Mount"
-		else
-			return GetSpellInfo(itemid) or "Unknown Mount"
+	if type(itemid) == "table" then
+		local idTable = {}
+		for k,tableItem in pairs(itemid) do
+			tinsert(idTable, self:GetIDName(tableItem))
 		end
-	elseif type(itemid) == "table" then
-		for a=1, itemid do
-			tempname = itemid[a]
-			local GoGo_TempTable = {}
-			tinsert(GoGo_TempTable, tempname)
-			if (#FilterMountsIn(GoGo_TempTable, 4) == 1) then
-				if addonTable.Debug then
-					self:DebugAddLine("GoGo_GetIDName: GetItemID for " .. tempname .. GetItemInfo(tempname))
-				end
-				ItemName = ItemName .. (GetItemInfo(tempname) or "Unknown Mount") .. ", "
-			else
-				if addonTable.Debug then
-					self:DebugAddLine("GoGo_GetIDName: GetSpellID for " .. tempname .. GetSpellInfo(tempname))
-				end
-				ItemName = ItemName .. (GetSpellInfo(tempname) or "Unknown Mount") .. ", "
-			end
-				if addonTable.Debug then
-					self:DebugAddLine("GoGo_GetIDName: Itemname string is " .. ItemName)
-				end
+		local idString = table.concat(idTable, ", ")
+		if addonTable.Debug then
+			self:DebugAddLine("Itemname string is " .. idString)
 		end
-		return ItemName
+		return idString
+	end
+	if addonTable.MountDB[itemid] and addonTable.MountDB[itemid][4] == true then
+		self:DebugAddLine("GetItemID for", itemid, GetItemInfo(itemid))
+		return GetItemInfo(itemid) or "Unknown Mount"
+	else
+		self:DebugAddLine("GetSpellID for", itemid, GetSpellInfo(itemid))
+		return GetSpellInfo(itemid) or "Unknown Mount"
 	end
 end
 
 function GoGoMount:FillButton(button, mount)
 	if mount then
 		if addonTable.Debug then 
-			self:DebugAddLine("GoGo_FillButton: Casting " .. mount)
+			self:DebugAddLine("Casting " .. mount)
 		end
 		button:SetAttribute("macrotext", "/use "..mount)
 	else
@@ -831,23 +818,19 @@ end
 function GoGoMount:CheckBindings()
 	for binding, button in pairs({GOGOBINDING = GoGoButton1, GOGOBINDING2 = GoGoButton2, GOGOBINDING3 = GoGoButton3}) do
 		ClearOverrideBindings(button)
-		local key1, key2 = GetBindingKey(binding)
-		if key1 then
-			SetOverrideBindingClick(button, true, key1, button:GetName())
-		end
-		if key2 then
-			SetOverrideBindingClick(button, true, key2, button:GetName())
+		for _, key in ipairs({GetBindingKey(binding)}) do
+			if key then
+				SetOverrideBindingClick(button, true, key, button:GetName())
+			end
 		end
 	end
 end
 
 function GoGoMount:CanFly()
-	addonTable.Player.SubZone = GetSubZoneText()
-
 	local level = UnitLevel("player")
 	if (level < 60) then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_CanFly: Failed - Player under level 60")
+			self:DebugAddLine("Failed - Player under level 60")
 		end
 		return false
 	end
@@ -856,45 +839,45 @@ function GoGoMount:CanFly()
 		return true
 	end
 
-	if IsOnMapID(113) and SpellInBook(addonTable.SpellDB.ColdWeatherFlying) then -- On Northrend and know cold weather
+	if IsOnMapID(113) and self:SpellInBook(addonTable.SpellDB.ColdWeatherFlying) then -- On Northrend and know cold weather
 		if IsOnMapID(125) then
-			if addonTable.Player.SubZone == L["Krasus' Landing"] then
+			if playerSubZone == L["Krasus' Landing"] then
 				if not IsFlyableArea() then
 					if addonTable.Debug then
-						self:DebugAddLine("GoGo_CanFly: Failed - Player in " .. L["Krasus' Landing"] .. " and not in flyable area.")
+						self:DebugAddLine("Failed - Player in " .. L["Krasus' Landing"] .. " and not in flyable area.")
 					end
 					return false
 				end
-			elseif addonTable.Player.SubZone == L["The Violet Citadel"] then
+			elseif playerSubZone == L["The Violet Citadel"] then
 				if not IsOutdoors() then
 					if addonTable.Debug then
-						self:DebugAddLine("GoGo_CanFly: Failed - Player in " .. L["The Violet Citadel"] .. " and not outdoors area.")
+						self:DebugAddLine("Failed - Player in " .. L["The Violet Citadel"] .. " and not outdoors area.")
 					end
 					return false
 				end
 				if not IsFlyableArea() then
 					if addonTable.Debug then
-						self:DebugAddLine("GoGo_CanFly: Failed - Player in " .. L["The Violet Citadel"] .. " and not in flyable area.")
+						self:DebugAddLine("Failed - Player in " .. L["The Violet Citadel"] .. " and not in flyable area.")
 					end
 					return false
 				end
-			elseif addonTable.Player.SubZone == L["The Underbelly"] then
+			elseif playerSubZone == L["The Underbelly"] then
 				if not IsFlyableArea() then
 					if addonTable.Debug then
-						self:DebugAddLine("GoGo_CanFly: Failed - Player in " .. L["The Underbelly"] .. " and not in flyable area.")
+						self:DebugAddLine("Failed - Player in " .. L["The Underbelly"] .. " and not in flyable area.")
 					end
 					return false
 				end
-			elseif addonTable.Player.SubZone == L["Dalaran"] then
+			elseif playerSubZone == L["Dalaran"] then
 				if not IsFlyableArea() then
 					if addonTable.Debug then
-						self:DebugAddLine("GoGo_CanFly: Failed - Player in " .. L["Dalaran"] .. " and not outdoors area.")
+						self:DebugAddLine("Failed - Player in " .. L["Dalaran"] .. " and not outdoors area.")
 					end
 					return false
 				end
 			else
 				if addonTable.Debug then
-					self:DebugAddLine("GoGo_CanFly: Failed - Player in " .. L["Dalaran"] .. " and not in known flyable subzone.")
+					self:DebugAddLine("Failed - Player in " .. L["Dalaran"] .. " and not in known flyable subzone.")
 				end
 				return false
 			end
@@ -903,12 +886,12 @@ function GoGoMount:CanFly()
 		if GetWintergraspWaitTime and IsOnMapID(123) then
 			if GetWintergraspWaitTime() then
 				if addonTable.Debug then
-					self:DebugAddLine("GoGo_CanFly: Player in Wintergrasp and battle ground is not active.")
+					self:DebugAddLine("Player in Wintergrasp and battle ground is not active.")
 				end
 				-- timer ticking to start wg.. we can mount
 			else
 				if addonTable.Debug then
-					self:DebugAddLine("GoGo_CanFly: Failed - Player in Wintergrasp and battle ground is active.")
+					self:DebugAddLine("Failed - Player in Wintergrasp and battle ground is active.")
 				end
 				-- we should be in battle.. can't mount
 				return false
@@ -918,7 +901,7 @@ function GoGoMount:CanFly()
 	end
 
 	if addonTable.Debug then
-		self:DebugAddLine("GoGo_CanFly: Failed - Player does not meet any flyable conditions.")
+		self:DebugAddLine("Failed - Player does not meet any flyable conditions.")
 	end
 	return false  -- we can't fly anywhere else
 end
@@ -927,36 +910,49 @@ function GoGoMount:CanRide()
 	local level = UnitLevel("player")
 	if level >= 20 then
 		if addonTable.Debug then
-			self:DebugAddLine("GoGo_CanRide: Passed - Player is over level 20.")
+			self:DebugAddLine("Passed - Player is over level 20.")
 		end
 		return true
 	end
 end
 
-function GoGoMount:CheckFor310()  -- checks to see if any existing 310% mounts exist to increase the speed of [6] mounts
-	if addonTable.Debug then
-		self:DebugAddLine("GoGo_CheckFor310: Function executed.")
-	end
-
-	local Find310Mounts = FilterMountsIn(addonTable.MountList,24)
-	Find310Mounts = FilterMountsIn(addonTable.MountList,6)
-	for k, MountID in ipairs(Find310Mounts) do
-		addonTable.MountDB[MountID][24] = true
-		if addonTable.Debug then
-			self:DebugAddLine("GoGo_CheckFor310: Mount ID " .. MountID .. " added as 310% flying.")
+local function MountListHasType(mountList, typeId)
+	for k, v in pairs(mountList) do
+		local mountData = addonTable.MountDB[v]
+		if mountData and mountData[typeId] then
+			return true
 		end
 	end
 end
 
+function GoGoMount:CheckFor310()  -- checks to see if any existing 310% mounts exist to increase the speed of [6] mounts
+	if addonTable.Debug then
+		self:DebugAddLine("Function executed.")
+	end
 
-function GoGoMount:Msg(msg)
+	if self.SuperFastFlyingFound then
+		return
+	end
+
+	if MountListHasType(addonTable.MountList, 24) then
+		self.SuperFastFlyingFound = true
+		for k, mountData in pairs(addonTable.MountDB) do
+			if mountData[6] then
+				mountData[24] = true
+				if addonTable.Debug then
+					self:DebugAddLine("Mount ID " .. k .. " added as 310% flying.")
+				end
+			end
+		end
+	end
+end
+
+function GoGoMount:Msg(msg,...)
 	if msg then
 		if GOGO_MESSAGES[msg] then
 			self:Msg(GOGO_MESSAGES[msg](self))
 		else
-			msg = string.gsub(msg, "<", LIGHTYELLOW_FONT_COLOR_CODE)
-			msg = string.gsub(msg, ">", "|r")
-			DEFAULT_CHAT_FRAME:AddMessage(GREEN_FONT_COLOR_CODE.."GoGo: |r"..msg)
+			self:Print(msg, ...)
 		end
 	end
 end
@@ -967,23 +963,27 @@ GOGO_ERRORS = {
 	[ERR_ATTACK_MOUNTED] = true,
 }
 
-GOGO_SPELLS = {
-	["DRUID"] = function()
-		if SpellInBook(addonTable.SpellDB.AquaForm) then
-			if not addonTable.SkipFlyingMount and GoGoMount:CanFly() and SpellInBook(addonTable.SpellDB.FastFlightForm) then
-				return "[swimming] "..SpellInBook(addonTable.SpellDB.AquaForm).."; [combat]"..SpellInBook(addonTable.SpellDB.TravelForm).."; "..SpellInBook(addonTable.SpellDB.FastFlightForm)
-			elseif not addonTable.SkipFlyingMount and GoGoMount:CanFly() and SpellInBook(addonTable.SpellDB.FlightForm) then
-				return "[swimming] "..SpellInBook(addonTable.SpellDB.AquaForm).."; [combat]"..SpellInBook(addonTable.SpellDB.TravelForm).."; "..SpellInBook(addonTable.SpellDB.FlightForm)
-			else
-				return "[swimming] "..SpellInBook(addonTable.SpellDB.AquaForm).."; "..SpellInBook(addonTable.SpellDB.TravelForm)
+function GoGoMount:SetClassSpell()
+	local classSpells = {
+		["DRUID"] = function()
+			local travelForm = self:SpellInBook(addonTable.SpellDB.TravelForm)
+			local aquaForm = self:SpellInBook(addonTable.SpellDB.AquaForm)
+			if aquaForm then
+				local flightForm = (not addonTable.SkipFlyingMount and self:CanFly()) and (self:SpellInBook(addonTable.SpellDB.FastFlightForm) or self:SpellInBook(addonTable.SpellDB.FlightForm))
+				if flightForm then
+					return "[swimming] "..aquaForm.."; [combat]"..travelForm.."; "..flightForm
+				else
+					return "[swimming] "..aquaForm.."; "..travelForm
+				end
 			end
+			return travelForm
+		end,
+		["SHAMAN"] = function()
+			return self:SpellInBook(addonTable.SpellDB.GhostWolf)
 		end
-		return SpellInBook(addonTable.SpellDB.TravelForm)
-	end,
-	["SHAMAN"] = function()
-		return SpellInBook(addonTable.SpellDB.GhostWolf)
-	end,
-}
+	}
+	self.classSpell = classSpells[playerClass]
+end
 
 GOGO_COMMANDS = {
 	["auto"] = function(self)
@@ -1007,7 +1007,7 @@ GOGO_COMMANDS = {
 				end
 			end
 		else
-			self.db.char.FilteredZones[addonTable.Player.Zone] = nil
+			self.db.char.FilteredZones[playerZone] = nil
 			if not InCombatLockdown() then
 				for i, button in ipairs({GoGoButton, GoGoButton2}) do
 					self:FillButton(button)
@@ -1055,9 +1055,9 @@ GOGO_MESSAGES = {
 		else
 			msg =  "Global Ignore Mounts: ?".." - </gogo ignore ItemLink> or </gogo ignore SpellName> to add"
 		end
-		if self.db.char.FilteredZones[addonTable.Player.Zone] then
-			list = list .. self:GetIDName(self.db.char.FilteredZones[addonTable.Player.Zone])
-			msg = msg .. "\n" .. addonTable.Player.Zone ..": "..list.." - Disable global mount preferences to change."
+		if self.db.char.FilteredZones[playerZone] then
+			list = list .. self:GetIDName(self.db.char.FilteredZones[playerZone])
+			msg = msg .. "\n" .. playerZone ..": "..list.." - Disable global mount preferences to change."
 		end
 		return msg
 	end,
@@ -1065,11 +1065,11 @@ GOGO_MESSAGES = {
 		local msg = ""
 		if not self.db.char.GlobalPrefMount then
 			local list = ""
-			if self.db.char[addonTable.Player.Zone] then
-				list = list .. self:GetIDName(self.db.char[addonTable.Player.Zone])
-				msg = addonTable.Player.Zone..": "..list.." - </gogo clear> to clear"
+			if self.db.char[playerZone] then
+				list = list .. self:GetIDName(self.db.char[playerZone])
+				msg = playerZone..": "..list.." - </gogo clear> to clear"
 			else
-				msg = addonTable.Player.Zone..": ?".." - </gogo ItemLink> or </gogo SpellName> to add"
+				msg = playerZone..": ?".." - </gogo ItemLink> or </gogo SpellName> to add"
 			end
 			if self.db.char.GlobalPrefMounts then
 				list = list .. self:GetIDName(self.db.char.GlobalPrefMounts)
@@ -1084,9 +1084,9 @@ GOGO_MESSAGES = {
 			else
 				msg =  "Global Preferred Mounts: ?".." - </gogo ItemLink> or </gogo SpellName> to add"
 			end
-			if self.db.char[addonTable.Player.Zone] then
-				list = list .. self:GetIDName(self.db.char[addonTable.Player.Zone])
-				msg = msg .. "\n" .. addonTable.Player.Zone ..": "..list.." - Disable global mount preferences to change."
+			if self.db.char[playerZone] then
+				list = list .. self:GetIDName(self.db.char[playerZone])
+				msg = msg .. "\n" .. playerZone ..": "..list.." - Disable global mount preferences to change."
 			end
 			return msg
 		end
@@ -1108,14 +1108,10 @@ GOGO_MESSAGES = {
 	["optiongui"] = function() return "To open the GUI options window - </gogo options>" end,
 }
 
----------
-function GoGoMount:DebugAddLine(LogLine)
----------
-	if not addonTable.DebugLine then addonTable.DebugLine = 1 end
-	GoGo_DebugLog[addonTable.DebugLine] = LogLine
-	self:Msg(LogLine)
-	addonTable.DebugLine = addonTable.DebugLine + 1
-	
+function GoGoMount:DebugAddLine(...)
+	local callingFunc = debugstack(2,1,0)
+	local funcMatch = strmatch(callingFunc, ("`(.+)'"))
+	self:Msg(funcMatch or "", ...)
 end
 
 function GoGoMount:GetOptions()
