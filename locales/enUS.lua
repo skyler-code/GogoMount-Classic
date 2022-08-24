@@ -13,3 +13,6 @@ L["Single click to shift from form to travel forms"] = true
 L["Always use flight forms instead of when moving only"] = true
 L["Consider 310% and 280% mounts the same speed"] = true
 L["Preferred mount changes apply to global setting"] = true
+L["Mount/Dismount"] = true
+L["Mount/Dismount (no flying)"] = true
+L["Mount/Dismount Passenger Mounts"] = true

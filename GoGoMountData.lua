@@ -1,11 +1,13 @@
 local addonName, addonTable = ...
 
-BINDING_HEADER_GOGOHEADER = addonName
-BINDING_NAME_GOGOBINDING = "Mount/Dismount"
-BINDING_NAME_GOGOBINDING2 = "Mount/Dismount (no flying)"
-BINDING_NAME_GOGOBINDING3 = "Mount/Dismount Passenger Mounts"
+local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 
-addonTable.Player = {}
+BINDING_HEADER_GOGOHEADER = addonName
+
+BINDING_NAME_GOGOBINDING = L["Mount/Dismount"]
+BINDING_NAME_GOGOBINDING2 = L["Mount/Dismount (no flying)"]
+BINDING_NAME_GOGOBINDING3 = L["Mount/Dismount Passenger Mounts"]
+
 addonTable.MountList = {}
 
 addonTable.SpellDB = {
@@ -18,7 +20,13 @@ addonTable.SpellDB = {
 	GhostWolf = 2645,
 	AspectCheetah = 5118,
 	Engineering = 4036,
-	Tailoring = 5118
+	Tailoring = 3908,
+}
+
+addonTable.PlayerSkills = {
+	[GetSpellInfo(addonTable.SpellDB.Engineering)] = 0,
+	[GetSpellInfo(addonTable.SpellDB.Tailoring)] = 0,
+	[L["Riding"]] = 0
 }
 
 addonTable.MountDB = {
