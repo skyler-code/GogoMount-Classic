@@ -1,10 +1,10 @@
 local addonName, addonTable = ...
 
 local tinsert, tremove = tinsert, tremove
-local GetRealZoneText, InCombatLockdown, IsFlying, GetZoneText, GetSubZoneText, IsOutdoors, IsFlyableArea, IsFalling, IsSwimming =
-	GetRealZoneText, InCombatLockdown, IsFlying, GetZoneText, GetSubZoneText, IsOutdoors, IsFlyableArea, IsFalling, IsSwimming
-local IsMounted, CanExitVehicle, GetMinimapZoneText, UnitBuff, GetUnitSpeed, GetNumSkillLines, GetSkillLineInfo, GetSpellBookItemName =
-	IsMounted, CanExitVehicle, GetMinimapZoneText, UnitBuff, GetUnitSpeed, GetNumSkillLines, GetSkillLineInfo, GetSpellBookItemName
+local GetRealZoneText, InCombatLockdown, IsFlying, GetZoneText, GetSubZoneText, IsOutdoors, IsFlyableArea, IsFalling, IsSwimming
+	= GetRealZoneText, InCombatLockdown, IsFlying, GetZoneText, GetSubZoneText, IsOutdoors, IsFlyableArea, IsFalling, IsSwimming
+local IsMounted, CanExitVehicle, GetMinimapZoneText, UnitAura, GetUnitSpeed, GetNumSkillLines, GetSkillLineInfo, GetSpellBookItemName
+	= IsMounted, CanExitVehicle, GetMinimapZoneText, UnitAura, GetUnitSpeed, GetNumSkillLines, GetSkillLineInfo, GetSpellBookItemName
 local C_Map = C_Map
 
 local GoGoMount = LibStub("AceAddon-3.0"):NewAddon(addonName, "AceConsole-3.0", "AceEvent-3.0")
@@ -17,8 +17,8 @@ local _, playerClass = UnitClass("player")
 local savedDBDefaults = {
 	char = {
 		enabled = true,
-        autodismount = true,
-		genericfastflyer = false,
+        autoDismount = true,
+		genericFastFlyer = false,
 		DruidClickForm = true,
 		DruidFlightForm = true,
 		GlobalPrefMount = false,
@@ -34,17 +34,22 @@ local GOGO_ERRORS = {
 	[ERR_ATTACK_MOUNTED] = true,
 }
 
+local function OpenOptions()
+	InterfaceOptionsFrame_OpenToCategory(addonName)
+	InterfaceOptionsFrame_OpenToCategory(addonName)
+end
+
 local GOGO_COMMANDS = {
 	["auto"] = function(self)
-		self.db.char.autodismount = not self.db.char.autodismount
+		self.db.char.autoDismount = not self.db.char.autoDismount
 		self:Msg("auto")
 	end,
-	["genericfastflyer"] = function(self)
+	["genericFastFlyer"] = function(self)
 		if not self:CanFly() then
 			return
 		else
-			self.db.char.genericfastflyer = not self.db.char.genericfastflyer
-			self:Msg("genericfastflyer")
+			self.db.char.genericFastFlyer = not self.db.char.genericFastFlyer
+			self:Msg("genericFastFlyer")
 		end
 	end,
 	["clear"] = function(self)
@@ -73,27 +78,24 @@ local GOGO_COMMANDS = {
 		self.db.char.DruidFlightForm = not self.db.char.DruidFlightForm
 		self:Msg("druidflightform")
 	end,
-	["options"] = function(self)
-		InterfaceOptionsFrame_OpenToCategory(addonName)
-		InterfaceOptionsFrame_OpenToCategory(addonName)
-	end,
+	["options"] = OpenOptions,
 }
 
 local GOGO_MESSAGES = {
 	["auto"] = function(self)
-		if self.db.char.autodismount then
+		if self.db.char.autoDismount then
 			return "Autodismount active - </gogo auto> to toggle"
 		else
 			return "Autodismount inactive - </gogo auto> to toggle"
 		end
 	end,
-	["genericfastflyer"] = function(self)
+	["genericFastFlyer"] = function(self)
 		if not self:CanFly() then
 			return
-		elseif self.db.char.genericfastflyer then
-			return "Considering epic flying mounts 310% - 280% speeds the same for random selection - </gogo genericfastflyer> to toggle"
+		elseif self.db.char.genericFastFlyer then
+			return "Considering epic flying mounts 310% - 280% speeds the same for random selection - </gogo genericFastFlyer> to toggle"
 		else
-			return "Considering epic flying mounts 310% - 280% speeds different for random selection - </gogo genericfastflyer> to toggle"
+			return "Considering epic flying mounts 310% - 280% speeds different for random selection - </gogo genericFastFlyer> to toggle"
 		end
 	end,
 	["ignore"] = function(self)
@@ -189,6 +191,26 @@ function GoGoMount:SpellInBook(spell)
 	end
 end
 
+function GoGoMount:GetPlayerAura(spell, filter)
+	if filter and not filter:upper():find("FUL") then
+		filter = filter.."|HELPFUL"
+	end
+	for i = 1, 255 do
+		local name, _, _, _, _, _, _, _, _, spellId = UnitAura("player", i, filter)
+		if not name then return end
+		if spell == spellId or spell == name then
+			return i, UnitAura("player", i, filter)
+		end
+	end
+end
+
+function GoGoMount:CancelPlayerBuff(spell)
+	local auraIndex = self:GetPlayerAura(spell)
+	if auraIndex then
+		CancelUnitBuff("player", auraIndex)
+	end
+end
+
 local function IsMoving()
     return GetUnitSpeed("player") ~= 0
 end
@@ -250,6 +272,7 @@ end
 
 function GoGoMount:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New(addonName.."DB", savedDBDefaults)
+	self:RegisterChatCommand(addonName, "OnSlash")
 	self:RegisterChatCommand("gogo", "OnSlash")
 
 	addonTable.TestVersion = false
@@ -290,7 +313,7 @@ function GoGoMount:SPELLS_CHANGED()
 end
 
 function GoGoMount:UNIT_SPELLCAST_SUCCEEDED(_, unitId, _, spellId)
-	if unitId == 'player' and spellId == 55884 then
+	if unitId == "player" and spellId == 55884 then
 		self:DebugAddLine("EVENT: Companion Learned")
 		self:BuildMountSpellList()
 		self:BuildMountList()
@@ -303,7 +326,9 @@ function GoGoMount:ZONE_CHANGED()
 end
 
 function GoGoMount:TAXIMAP_OPENED()
-	self:Dismount()
+	if self.db.char.autoDismount then	
+		self:Dismount()
+	end
 end
 
 function GoGoMount:UPDATE_BINDINGS()
@@ -313,7 +338,7 @@ function GoGoMount:UPDATE_BINDINGS()
 end
 
 function GoGoMount:UI_ERROR_MESSAGE(event, errorType, errorMsg)
-	if self.db.char.autodismount and GOGO_ERRORS[errorMsg] and not IsFlying() then
+	if self.db.char.autoDismount and GOGO_ERRORS[errorMsg] and not IsFlying() then
 		self:Dismount()
 	end
 end
@@ -336,25 +361,26 @@ function GoGoMount:SKILL_LINES_CHANGED()
 end
 
 function GoGoMount:OnSlash(msg)
-	if GOGO_COMMANDS[string.lower(msg)] then
-		GOGO_COMMANDS[string.lower(msg)](self)
-	elseif string.find(msg, "ignore") then
+	if GOGO_COMMANDS[msg:lower()] then
+		GOGO_COMMANDS[msg:lower()](self)
+	elseif msg:find("ignore") then
 		local idtype, itemid = parseForItemId(msg)
 		self:AddIgnoreMount(itemid)
 		self:Msg("ignore")
-	elseif string.find(msg, "spell:%d+") or string.find(msg, "item:%d+") then
+	elseif msg:find("spell:%d+") or msg:find("item:%d+") then
 		local idtype, itemid = parseForItemId(msg)
 		self:AddPrefMount(itemid)
 		self:Msg("pref")
-	else
-		self:Msg("optiongui")
+	elseif msg:find("help") then
 		self:Msg("auto")
-		self:Msg("genericfastflyer")
+		self:Msg("genericFastFlyer")
 		self:Msg("updatenotice")
 		self:Msg("mountnotice")
 		if playerClass == "DRUID" then self:Msg("druidclickform") end
 		if playerClass == "DRUID" then self:Msg("druidflightform") end
 		self:Msg("pref")
+	else
+		OpenOptions()
 	end
 end
 
@@ -420,7 +446,7 @@ function GoGoMount:PreClick(button)
 	elseif playerClass == "DRUID" and self:IsShifted() and not InCombatLockdown() then
 		self:DebugAddLine("Player is a druid, is shifted and not in combat.")
 		self:Dismount(button)
-	elseif playerClass == "SHAMAN" and UnitBuff("player", addonTable.SpellDB.GhostWolf) then
+	elseif playerClass == "SHAMAN" and self:GetPlayerAura(addonTable.SpellDB.GhostWolf) then
 		self:DebugAddLine("Player is a shaman and is in wolf form.")
 		self:Dismount()
 	elseif not InCombatLockdown() then
@@ -445,10 +471,10 @@ function GoGoMount:GetMount()
 			end
 			return self:SpellInBook(self.classSpell)
 		end
-	elseif playerClass == "SHAMAN" and IsMoving() then
+	elseif playerClass == "SHAMAN" and IsOutdoors() and IsMoving() then
 		if select(5, GetTalentInfo(2, 3)) == 2 then
 			if addonTable.Debug then
-				self:DebugAddLine("We are a shaman and we're moving.  Changing shape form.")
+				self:DebugAddLine("We are a shaman, we're outdoors, and we're moving.  Changing shape form.")
 			end
 			return self:SpellInBook(self.classSpell)
 		end
@@ -566,7 +592,7 @@ function GoGoMount:GetMount()
 			GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 9)
 			mounts = FilterMountsIn(GoGo_TempMounts, 24)
 		end
-		if self.db.char.genericfastflyer then
+		if self.db.char.genericFastFlyer then
 			local GoGo_TempMountsA = FilterMountsIn(GoGo_TempMounts, 23)
 			if ridingLevel < 300 then
 				GoGo_TempMountsA = FilterMountsOut(GoGo_TempMountsA, 29)
@@ -720,8 +746,8 @@ function GoGoMount:Dismount(button)
 				self:FillButton(button, isShifted)
 			end
 		end
-	elseif playerClass == "SHAMAN" and UnitBuff("player", self:SpellInBook(addonTable.SpellDB.GhostWolf)) then
-		CancelUnitBuff("player", self:SpellInBook(addonTable.SpellDB.GhostWolf))
+	elseif playerClass == "SHAMAN" and self:SpellInBook(addonTable.SpellDB.GhostWolf) then
+		self:CancelPlayerBuff(addonTable.SpellDB.GhostWolf)
 	end
 end
 
@@ -1075,21 +1101,21 @@ function GoGoMount:GetOptions()
 				get = function() return self.db.char.DruidFlightForm end,
 				set = function(info, v) self.db.char.DruidFlightForm = v end,
 			},
-			autodismount = {
+			autoDismount = {
 				name = L["Enable automatic dismount"],
 				type = "toggle",
 				order = 3,
 				width = "full",
-				get = function() return self.db.char.autodismount end,
-				set = function(info, v) self.db.char.autodismount = v end,
+				get = function() return self.db.char.autoDismount end,
+				set = function(info, v) self.db.char.autoDismount = v end,
 			},
-			genericfastflyer = {
+			genericFastFlyer = {
 				name = L["Consider 310% and 280% mounts the same speed"],
 				type = "toggle",
 				order = 4,
 				width = "full",
-				get = function() return self.db.char.genericfastflyer end,
-				set = function(info, v) self.db.char.genericfastflyer = v end,
+				get = function() return self.db.char.genericFastFlyer end,
+				set = function(info, v) self.db.char.genericFastFlyer = v end,
 			},
 			GlobalPrefMount = {
 				name = L["Preferred mount changes apply to global setting"],
