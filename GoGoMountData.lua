@@ -8,8 +8,6 @@ BINDING_NAME_GOGOBINDING = L["Mount/Dismount"]
 BINDING_NAME_GOGOBINDING2 = L["Mount/Dismount (no flying)"]
 BINDING_NAME_GOGOBINDING3 = L["Mount/Dismount Passenger Mounts"]
 
-addonTable.MountList = {}
-
 addonTable.SpellDB = {
 	ColdWeatherFlying = 54197,
 	FastFlightForm = 40120,

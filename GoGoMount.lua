@@ -309,8 +309,8 @@ function GoGoMount:CreateBindings()
 		newBinding:SetAttribute("type", "macro")
 		newBinding:SetScript("PreClick", function(btn)
 			self:DebugAddLine("BUTTON: Button "..k.." pressed.")
-			addonTable.SelectPassengerMount = v[1]
-			addonTable.SkipFlyingMount = v[2]
+			self.SelectPassengerMount = v[1]
+			self.SkipFlyingMount = v[2]
 			self:PreClick(btn)
 		end)
 	end
@@ -321,7 +321,6 @@ function GoGoMount:OnInitialize()
 	self:RegisterChatCommand(addonName, "OnSlash")
 	self:RegisterChatCommand("gogo", "OnSlash")
 
-	addonTable.TestVersion = false
 	playerZone, playerSubZone = GetRealZoneText(), GetSubZoneText()
 
 	self:CreateBindings()
@@ -548,7 +547,7 @@ function GoGoMount:GetMount()
 		-- Not updating bag items on bag changes right now so scan and update list
 		self:BuildMountItemList()
 		self:BuildMountList()
-		GoGo_FilteredMounts = addonTable.MountList
+		GoGo_FilteredMounts = self.MountList
 		if not GoGo_FilteredMounts or #GoGo_FilteredMounts == 0 then
 			if self.classSpell then
 				self:DebugAddLine("No mounts found. Forcing "..playerClass.." shape form.")
@@ -582,7 +581,7 @@ function GoGoMount:GetMount()
 
 	if IsSwimming() then
 		self:DebugAddLine("Forcing ground mounts because we're swimming.")
-		addonTable.SkipFlyingMount = true
+		self.SkipFlyingMount = true
 	else
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 53)
 	end
@@ -592,7 +591,7 @@ function GoGoMount:GetMount()
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 50)
 	end
 
-	if addonTable.SelectPassengerMount then
+	if self.SelectPassengerMount then
 		self:DebugAddLine("Filtering out all mounts except passenger mounts since passenger mount only was requested.")
 		GoGo_FilteredMounts = FilterMountsIn(GoGo_FilteredMounts, 2) or {}
 	end
@@ -602,7 +601,7 @@ function GoGoMount:GetMount()
 		mounts = FilterMountsIn(GoGo_FilteredMounts, 5) or {}
 	end
 	
-	if #mounts == 0 and self:CanFly() and not addonTable.SkipFlyingMount then
+	if #mounts == 0 and self:CanFly() and not self.SkipFlyingMount then
 		self:DebugAddLine("Looking for flying mounts since we past flight checks.")
 		if ridingLevel < 225 then
 			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 36)
@@ -678,7 +677,7 @@ function GoGoMount:GetMount()
 	end
 	
 	-- Set the oculus mounts as the only mounts available if we're in the oculus, not skiping flying and have them in inventory
-	if #mounts == 0 and #GoGo_FilteredMounts >= 1 and playerZone == L["The Oculus"] and not addonTable.SkipFlyingMount then
+	if #mounts == 0 and #GoGo_FilteredMounts >= 1 and playerZone == L["The Oculus"] and not self.SkipFlyingMount then
 		GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 54) or {}
 		if #GoGo_TempMounts >= 1 then
 			mounts = GoGo_TempMounts
@@ -776,22 +775,22 @@ function GoGoMount:Dismount(button)
 end
 
 function GoGoMount:BuildMountList()
-	addonTable.MountList = {}
-	for _, v in pairs(addonTable.MountSpellList or {}) do
-		tinsert(addonTable.MountList, v)
+	self.MountList = {}
+	for _, v in pairs(self.MountSpellList or {}) do
+		tinsert(self.MountList, v)
 	end
-	for _, v in pairs(addonTable.MountItemList) do
-		tinsert(addonTable.MountList, v)
+	for _, v in pairs(self.MountItemList) do
+		tinsert(self.MountList, v)
 	end
-	return addonTable.MountList
+	return self.MountList
 end 
 
 function GoGoMount:BuildMountSpellList()
-	addonTable.MountSpellList = {}
+	self.MountSpellList = {}
 	local superFastFound
 	for slot = 1, GetNumCompanions("MOUNT") do
 		local _, _, SpellID = GetCompanionInfo("MOUNT", slot)
-		tinsert(addonTable.MountSpellList, SpellID)
+		tinsert(self.MountSpellList, SpellID)
 		local mountData = addonTable.MountDB[SpellID]
 		if mountData and mountData[24] then
 			superFastFound = true
@@ -800,22 +799,22 @@ function GoGoMount:BuildMountSpellList()
 	if superFastFound then
 		self:ApplySuperFast()
 	end
-	self:DebugAddLine("Added", #addonTable.MountSpellList, "mounts to spell list.")
-	return addonTable.MountSpellList
+	self:DebugAddLine("Added", #self.MountSpellList, "mounts to spell list.")
+	return self.MountSpellList
 end
 
 function GoGoMount:BuildMountItemList()
-	addonTable.MountItemList = {}
+	self.MountItemList = {}
 	for bag = 0, NUM_BAG_FRAMES do
 		for slot = 1, GetContainerNumSlots(bag) do
 			local itemId = GetContainerItemID(bag, slot)
 			if addonTable.MountsItems[itemId] then
-				tinsert(addonTable.MountItemList, itemId)
+				tinsert(self.MountItemList, itemId)
 			end
 		end
 	end
-	self:DebugAddLine("Added", #addonTable.MountItemList, "mounts to item list.")
-	return addonTable.MountItemList
+	self:DebugAddLine("Added", #self.MountItemList, "mounts to item list.")
+	return self.MountItemList
 end
 
 function GoGoMount:IsShifted()
@@ -934,7 +933,7 @@ function GoGoMount:CanFly()
 		return true
 	end
 
-	if IsOnMapID(113) and self:SpellInBook(addonTable.SpellDB.ColdWeatherFlying) then -- On Northrend and know cold weather
+	if self:SpellInBook(addonTable.SpellDB.ColdWeatherFlying) and IsOnMapID(113)  then -- On Northrend and know cold weather
 		if IsOnMapID(125) then
 			if playerSubZone == L["Krasus' Landing"] then
 				if not IsFlyableArea() then
@@ -1032,7 +1031,7 @@ function GoGoMount:SetClassSpell()
 			local travelForm = self:SpellInBook(addonTable.SpellDB.TravelForm)
 			local aquaForm = self:SpellInBook(addonTable.SpellDB.AquaForm)
 			if aquaForm then
-				local flightForm = (not addonTable.SkipFlyingMount and self:CanFly()) and (self:SpellInBook(addonTable.SpellDB.FastFlightForm) or self:SpellInBook(addonTable.SpellDB.FlightForm))
+				local flightForm = (not self.SkipFlyingMount and self:CanFly()) and (self:SpellInBook(addonTable.SpellDB.FastFlightForm) or self:SpellInBook(addonTable.SpellDB.FlightForm))
 				if flightForm then
 					return "[swimming] "..aquaForm.."; [combat]"..travelForm.."; "..flightForm
 				else
