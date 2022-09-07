@@ -2,11 +2,16 @@ local addonName, addonTable = ...
 
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 
-BINDING_HEADER_GOGOHEADER = addonName
+addonTable.bindings = {
+	{ title = L["Mount/Dismount"] }, -- main
+	{ title = L["Mount/Dismount (no flying)"], SkipFlyingMount = true }, -- no flying
+	{ title = L["Mount/Dismount Passenger Mounts"], SelectPassengerMount = true }, -- passenger mounts
+}
 
-BINDING_NAME_GOGOBINDING = L["Mount/Dismount"]
-BINDING_NAME_GOGOBINDING2 = L["Mount/Dismount (no flying)"]
-BINDING_NAME_GOGOBINDING3 = L["Mount/Dismount Passenger Mounts"]
+BINDING_HEADER_GOGOHEADER = addonName
+for k, v in ipairs(addonTable.bindings) do
+    _G["BINDING_NAME_"..addonName:upper().."BINDING"..k] = v.title
+end
 
 addonTable.SpellDB = {
 	ColdWeatherFlying = 54197,
@@ -21,10 +26,9 @@ addonTable.SpellDB = {
 	Tailoring = 3908,
 }
 
-addonTable.PlayerSkills = {
-	[GetSpellInfo(addonTable.SpellDB.Engineering)] = 0,
-	[GetSpellInfo(addonTable.SpellDB.Tailoring)] = 0,
-	[L["Riding"]] = 0
+addonTable.TalentIndexDB = {
+	ImpGhostWolf = {2, 3, 2},
+	FeralSwiftness = {2, 12, 1}
 }
 
 addonTable.MountDB = {
@@ -35,7 +39,7 @@ addonTable.MountDB = {
 	[26656] = {[16] = true, [21] = true, [37] = true, [51] = true},  -- Black Qiraji Battle Tank
 
 	[30174] = {[15] = true, [25] = true, [39] = true},  -- Riding Turtle
-	[64731] = {[5] = true, [15] = true, [25] = true, [120] = true, [39] = true},  -- Sea Turtle
+	[64731] = {[5] = true, [15] = true, [25] = true, [39] = true},  -- Sea Turtle
 	
 	[33189] = {[4] = true, [15] = true, [25] = true, [39] = true},  -- Rickety Magic Broom  --  itemid
 
@@ -328,7 +332,8 @@ addonTable.MountDB = {
 	[68188] = {[16] = true, [21] = true, [37] = true},  -- Crusader's Black Warhorse
 	[72286] = {[9] = true, [3] = true, [14] = true, [20] = true, [21] = true, [22] = true, [29] = true, [23] = true, [38] = true, [24] = true},  -- Invincible
 	[73313] = {[16] = true, [21] = true, [37] = true},  -- Crimson Deathcharger
-	[75614] = {[9] = true, [3] = true, [6] = true, [14] = true, [20] = true, [21] = true, [22] = true, [29] = true, [23] = true, [38] = true, [24] = false},  -- Celestial Steed
+	[75614] = {[9] = true, [3] = true, [6] = true, [14] = true, [20] = true, [21] = true, [22] = true, [29] = true, [23] = true, [38] = true},  -- Celestial Steed
+	--[372677] = {[9] = true, [2] = true, [6] = true, [12] = true, [22] = true, [23] = true, [24] = false, [36] = true},  -- Kalu'ak Whalebone Glider
 	
 	[34406] = {[14] = true, [20] = true, [38] = true},  -- Brown Elekk
 	[34407] = {[16] = true, [21] = true, [37] = true},  -- Great Elite Elekk
