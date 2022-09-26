@@ -844,8 +844,9 @@ function GoGoMount:BuildMountItemList()
 end
 
 function GoGoMount:IsShifted()
-	for i = 1, GetNumShapeshiftForms() do
-		local _, active, _, spellID = GetShapeshiftFormInfo(i)
+	local currentForm = GetShapeshiftForm()
+	if currentForm > 0 then
+		local _, active, _, spellID = GetShapeshiftFormInfo(currentForm)
 		if active then
 			local name = GetSpellInfo(spellID)
 			self:DebugAddLine("Found", name)
