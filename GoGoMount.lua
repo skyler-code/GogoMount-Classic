@@ -831,7 +831,7 @@ end
 
 function GoGoMount:BuildMountItemList()
 	self.MountItemList = {}
-	for bag = 0, NUM_BAG_FRAMES do
+	for bag = BACKPACK_CONTAINER, NUM_BAG_SLOTS do
 		for slot = 1, GetContainerNumSlots(bag) do
 			local itemId = GetContainerItemID(bag, slot)
 			if addonTable.MountsItems[itemId] then
