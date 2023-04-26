@@ -333,6 +333,7 @@ addonTable.MountDB = {
 	[72286] = {[9] = true, [3] = true, [14] = true, [20] = true, [21] = true, [22] = true, [29] = true, [23] = true, [38] = true, [24] = true},  -- Invincible
 	[73313] = {[16] = true, [21] = true, [37] = true},  -- Crimson Deathcharger
 	[75614] = {[9] = true, [3] = true, [6] = true, [14] = true, [20] = true, [21] = true, [22] = true, [29] = true, [23] = true, [38] = true},  -- Celestial Steed
+	[394209] = {[9] = true, [3] = true, [6] = true, [14] = true, [20] = true, [21] = true, [22] = true, [29] = true, [23] = true, [38] = true},  -- Festering Emerald Drake
 	--[372677] = {[9] = true, [2] = true, [6] = true, [12] = true, [22] = true, [23] = true, [24] = false, [36] = true},  -- Kalu'ak Whalebone Glider
 	
 	[34406] = {[14] = true, [20] = true, [38] = true},  -- Brown Elekk
