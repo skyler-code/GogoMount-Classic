@@ -1,13 +1,14 @@
 local addonName, addonTable = ...
 
 local tinsert, tremove = tinsert, tremove
-local GetRealZoneText, InCombatLockdown, IsFlying, GetZoneText, GetSubZoneText, IsOutdoors, IsFlyableArea, IsFalling, IsSwimming
+local GetRealZoneText, InCombatLockdown, IsFlying, GetZoneText, GetSubZoneText, IsOutdoors, BlizzIsFlyableArea, IsFalling, IsSwimming
 	= GetRealZoneText, InCombatLockdown, IsFlying, GetZoneText, GetSubZoneText, IsOutdoors, IsFlyableArea, IsFalling, IsSwimming
 local IsMounted, CanExitVehicle, GetMinimapZoneText, UnitAura, GetUnitSpeed, GetNumSkillLines, GetSkillLineInfo, GetSpellBookItemName
 	= IsMounted, CanExitVehicle, GetMinimapZoneText, UnitAura, GetUnitSpeed, GetNumSkillLines, GetSkillLineInfo, GetSpellBookItemName
 local C_Map = C_Map
 
 local GoGoMount = LibStub("AceAddon-3.0"):NewAddon(addonName, "AceConsole-3.0", "AceEvent-3.0")
+_G[addonName] = GoGoMount
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 
 local _, playerClass = UnitClass("player")
@@ -63,17 +64,26 @@ local function IsMoving()
 end
 
 local function IsOnMapID(mapIds)
-	if type(mapIds) ~= "table" then
+	if type(mapIds) == "number" then
 		mapIds = {mapIds}
 	end
-	local currentMap = C_Map.GetMapInfo(C_Map.GetBestMapForUnit("player"))
-	if currentMap then
-		for k, mapID in pairs(mapIds) do
-			if currentMap.mapID == mapID or currentMap.parentMapID == mapID then
-				return true
+	local playerMap = C_Map.GetBestMapForUnit("player")
+	if playerMap then
+		local currentMap = C_Map.GetMapInfo(playerMap)
+		if currentMap then
+			for k, mapID in pairs(mapIds) do
+				if currentMap.mapID == mapID or currentMap.parentMapID == mapID then
+					return true
+				end
 			end
 		end
 	end
+end
+
+local function IsFlyableArea()
+	local isFlyable = BlizzIsFlyableArea()
+	-- if isFlyable and playerSubZone == C_Map.GetAreaInfo(4560)  then return false end
+	return isFlyable
 end
 
 local function FilterMountsIn(PlayerMounts, FilterID)
@@ -349,6 +359,7 @@ function GoGoMount:OnInitialize()
 	self:RegisterEvent("SKILL_LINES_CHANGED")
 	self:RegisterEvent("BAG_UPDATE_DELAYED")
 	self:RegisterEvent("SPELLS_CHANGED")
+	self:RegisterEvent("COMPANION_LEARNED")
 	self:RegisterEvent("TAXIMAP_OPENED")
 	self:RegisterEvent("UI_ERROR_MESSAGE")
 	self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
@@ -366,6 +377,11 @@ function GoGoMount:PLAYER_REGEN_DISABLED()
 end
 
 function GoGoMount:SPELLS_CHANGED(event)
+	self:DebugAddLine(event)
+	self:ParseSpellbook()
+end
+
+function GoGoMount:COMPANION_LEARNED(event)
 	self:DebugAddLine(event)
 	self:ParseSpellbook()
 end
@@ -696,7 +712,7 @@ function GoGoMount:GetMount()
 
 	if #mounts == 0 and #GoGo_FilteredMounts >= 1 then  -- no flying mounts selected yet - try to use loaned mounts
 		GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 52) or {}
-		if #GoGo_TempMounts >= 1 and IsOnMapID(118, 119, 120) then
+		if #GoGo_TempMounts >= 1 and IsOnMapID({118, 119, 120}) then
 			mounts = FilterMountsIn(GoGo_FilteredMounts, 52)
 		end
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 52)
@@ -832,8 +848,8 @@ end
 function GoGoMount:BuildMountItemList()
 	self.MountItemList = {}
 	for bag = BACKPACK_CONTAINER, NUM_BAG_SLOTS do
-		for slot = 1, GetContainerNumSlots(bag) do
-			local itemId = GetContainerItemID(bag, slot)
+		for slot = 1, C_Container.GetContainerNumSlots(bag) do
+			local itemId = C_Container.GetContainerItemID(bag, slot)
 			if addonTable.MountsItems[itemId] then
 				tinsert(self.MountItemList, itemId)
 			end
@@ -951,49 +967,52 @@ function GoGoMount:CanFly()
 		return true
 	end
 
-	if self:SpellInBook(addonTable.SpellDB.ColdWeatherFlying) and IsOnMapID(113)  then -- On Northrend and know cold weather
-		if IsOnMapID(125) then
-			if playerSubZone == L["Krasus' Landing"] then
-				if not IsFlyableArea() then
-					self:DebugAddLine("Failed - Player in " .. L["Krasus' Landing"] .. " and not in flyable area.")
+	if self:SpellInBook(addonTable.SpellDB.ColdWeatherFlying) then -- On Northrend and know cold weather
+		if IsOnMapID(113) then
+			if IsOnMapID(125) then
+				if playerSubZone == C_Map.GetAreaInfo(4564) then
+					if not IsFlyableArea() then
+						self:DebugAddLine("Failed - Player in " .. playerSubZone .. " and not in flyable area.")
+						return false
+					end
+				elseif playerSubZone == C_Map.GetAreaInfo(4619) then -- The Violet Citadel
+					if not IsOutdoors() then
+						self:DebugAddLine("Failed - Player in " .. playerSubZone.. " and not outdoors area.")
+						return false
+					end
+					if not IsFlyableArea() then
+						self:DebugAddLine("Failed - Player in " .. playerSubZone .. " and not in flyable area.")
+						return false
+					end
+					return false
+				elseif playerSubZone == C_Map.GetAreaInfo(4560) then -- The Underbelly
+					
+					return false
+				elseif playerSubZone == C_Map.GetAreaInfo(4395) then
+					if not IsFlyableArea() then
+						self:DebugAddLine("Failed - Player in " .. playerSubZone .. " and not outdoors area.")
+						return false
+					end
+					return false
+				else
+					self:DebugAddLine("Failed - Player in " .. playerSubZone .. " and not in known flyable subzone.")
 					return false
 				end
-			elseif playerSubZone == L["The Violet Citadel"] then
-				if not IsOutdoors() then
-					self:DebugAddLine("Failed - Player in " .. L["The Violet Citadel"] .. " and not outdoors area.")
-					return false
-				end
-				if not IsFlyableArea() then
-					self:DebugAddLine("Failed - Player in " .. L["The Violet Citadel"] .. " and not in flyable area.")
-					return false
-				end
-			elseif playerSubZone == L["The Underbelly"] then
-				if not IsFlyableArea() then
-					self:DebugAddLine("Failed - Player in " .. L["The Underbelly"] .. " and not in flyable area.")
-					return false
-				end
-			elseif playerSubZone == L["Dalaran"] then
-				if not IsFlyableArea() then
-					self:DebugAddLine("Failed - Player in " .. L["Dalaran"] .. " and not outdoors area.")
-					return false
-				end
-			else
-				self:DebugAddLine("Failed - Player in " .. L["Dalaran"] .. " and not in known flyable subzone.")
-				return false
 			end
-		end
 
-		if GetWintergraspWaitTime and IsOnMapID(123) then
-			if GetWintergraspWaitTime() then
-				self:DebugAddLine("Player in Wintergrasp and battle ground is not active.")
-				-- timer ticking to start wg.. we can mount
-			else
-				self:DebugAddLine("Failed - Player in Wintergrasp and battle ground is active.")
-				-- we should be in battle.. can't mount
+			if not IsFlyableArea() then
+				self:DebugAddLine("Failed - Player in " .. playerSubZone .. " and not outdoors area.")
 				return false
 			end
+
+			return true
+		elseif IsOnMapID(126) then --Underbelly
+			if not IsFlyableArea() then
+				self:DebugAddLine("Failed - Player in " .. playerSubZone .. " and not outdoors area.")
+				return false
+			end
+			return true
 		end
-		return true
 	end
 
 	self:DebugAddLine("Failed - Player does not meet any flyable conditions.")
