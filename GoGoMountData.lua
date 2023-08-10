@@ -32,6 +32,7 @@ addonTable.SpellDB = {
 	Engineering = 4036,
 	Tailoring = 3908,
 	KodoRiding = 18996,
+	HorseRiding = 824,
 }
 
 if isVanilla then
@@ -43,19 +44,18 @@ if isVanilla then
 
 	addonTable.MountDB = {
 
+		[5655] = {[4] = true, [14] = true, [20] = true, [38] = true},  -- Chestnut Mare
+
+
 		[15290] = {[4] = true,  [14] = true, [20] = true, [38] = true},  -- Brown Kodo
 		
 		-- Below are not used for detection, only used to prevent being reported as unknown mounts
-		[40120] = {[9] = true, [11] = true, [23] = true},  -- GOGO_DRUID_FAST_FLIGHTFORM
-		[33943] = {[9] = true, [11] = true, [22] = true},  -- GOGO_DRUID_FLIGHTFORM
 		[783] = {[28] = true}, -- GOGO_DRUID_TRAVELFORM
 		[2645] = {[28] = true}, -- GOGO_SHAMAN_GHOSTWOLF
 	
 	}
 
-	addonTable.MountsItems = {
-		[15290] = true, -- Brown Kodo
-	}
+	addonTable.MountsItems = addonTable.MountDB
 
 else
 
