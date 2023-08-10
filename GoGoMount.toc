@@ -12,4 +12,4 @@ locales.xml
 GoGoMountData.lua
 GoGoMount.lua
 
-bindings.xml
+bindings-wotlk.xml

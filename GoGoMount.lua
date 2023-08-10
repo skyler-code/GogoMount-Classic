@@ -546,8 +546,11 @@ function GoGoMount:PreClick(button)
 	end
 end
 
-local function playerHasTalent(talentKey)
-	local tier, column, minRank = unpack(addonTable.TalentIndexDB[talentKey])
+function playerHasTalent(talentKey)
+	local talentInfo = addonTable.TalentIndexDB[talentKey]
+	if not talentInfo then return false end
+
+	local tier, column, minRank = unpack(talentInfo)
 	return select(5, GetTalentInfo(tier, column)) >= minRank
 end
 
@@ -753,8 +756,8 @@ function GoGoMount:GetMount()
 	
 	-- Select ground mounts
 	if #mounts == 0 then
-		self:DebugAddLine("Looking for ground mounts since we can't fly.")
 		if self:CanRide() then
+			self:DebugAddLine("Looking for ground mounts since we can't fly.")
 			local canUseEpic = ridingLevel >= 150 or (isVanilla and UnitLevel("player") == 60)
 			if not canUseEpic then
 				GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 37)
@@ -1089,8 +1092,9 @@ end
 function GoGoMount:SetClassSpell()
 	local classSpells = {
 		["DRUID"] = function()
-			local travelForm = self:SpellInBook(addonTable.SpellDB.TravelForm)
+			local travelForm = self:SpellInBook(addonTable.SpellDB.TravelForm) or (playerHasTalent("FelineSwiftness") and self:SpellInBook(addonTable.SpellDB.CatForm)) or nil
 			local aquaForm = self:SpellInBook(addonTable.SpellDB.AquaForm)
+			local catForm = self:SpellInBook(addonTable.SpellDB.CatForm)
 			if aquaForm then
 				local flightForm = (not self.SkipFlyingMount and self:CanFly()) and (self:SpellInBook(addonTable.SpellDB.FastFlightForm) or self:SpellInBook(addonTable.SpellDB.FlightForm))
 				if flightForm then
