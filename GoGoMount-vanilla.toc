@@ -1,0 +1,15 @@
+## Interface: 11403
+## Title: GoGoMount
+## Version: 3.4.0
+## Notes: One-key solution for mounting/dismounting, supports spells, shapeshifting
+## Author: Brues
+## Dependencies: Ace3
+## SavedVariables: GoGoMountDB
+## X-OriginalVersion: Tak teh Troll @ Shadowsong EU
+
+locales.xml
+
+GoGoMountData.lua
+GoGoMount.lua
+
+bindings.xml

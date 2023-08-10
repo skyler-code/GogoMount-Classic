@@ -24,6 +24,7 @@ addonTable.SpellDB = {
 	AspectCheetah = 5118,
 	Engineering = 4036,
 	Tailoring = 3908,
+	KodoRiding = 18996,
 }
 
 addonTable.TalentIndexDB = {
@@ -398,6 +399,11 @@ addonTable.MountDB = {
 	[33943] = {[9] = true, [11] = true, [22] = true},  -- GOGO_DRUID_FLIGHTFORM
 	[783] = {[28] = true}, -- GOGO_DRUID_TRAVELFORM
 	[2645] = {[28] = true}, -- GOGO_SHAMAN_GHOSTWOLF
+
+
+
+	[15290] = {[4] = true,  [14] = true, [20] = true, [38] = true},  -- Brown Kodo
+
 }
 
 addonTable.MountsItems = {
@@ -412,4 +418,7 @@ addonTable.MountsItems = {
 	[37859] = true, -- Amber Essence
 	[37860] = true, -- Ruby Essence
 	[37815] = true, -- Emerald Essence
+
+	
+	[15290] = true, -- Brown Kodo
 }

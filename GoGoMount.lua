@@ -5,11 +5,15 @@ local GetRealZoneText, InCombatLockdown, IsFlying, GetZoneText, GetSubZoneText, 
 	= GetRealZoneText, InCombatLockdown, IsFlying, GetZoneText, GetSubZoneText, IsOutdoors, IsFlyableArea, IsFalling, IsSwimming
 local IsMounted, CanExitVehicle, GetMinimapZoneText, UnitAura, GetUnitSpeed, GetNumSkillLines, GetSkillLineInfo, GetSpellBookItemName
 	= IsMounted, CanExitVehicle, GetMinimapZoneText, UnitAura, GetUnitSpeed, GetNumSkillLines, GetSkillLineInfo, GetSpellBookItemName
+local GetContainerNumSlots = C_Container and C_Container.GetContainerNumSlots or GetContainerNumSlots
+local GetContainerItemID = C_Container and C_Container.GetContainerItemID or GetContainerItemID
 local C_Map = C_Map
 
 local GoGoMount = LibStub("AceAddon-3.0"):NewAddon(addonName, "AceConsole-3.0", "AceEvent-3.0")
 _G[addonName] = GoGoMount
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
+
+local isVanilla = WOW_PROJECT_ID == WOW_PROJECT_CLASSIC
 
 local _, playerClass = UnitClass("player")
 
@@ -17,9 +21,14 @@ local playerZone, playerSubZone
 local playerSkills = {
 	[GetSpellInfo(addonTable.SpellDB.Engineering)] = 0,
 	[GetSpellInfo(addonTable.SpellDB.Tailoring)] = 0,
-	[L["Riding"]] = 0
 }
 
+local ridingSkills = isVanilla and {
+	[L["Riding"]] = 0,
+	[GetSpellInfo(addonTable.SpellDB.KodoRiding)] = 0,
+} or {
+	[L["Riding"]] = 0,
+}
 
 local savedDBDefaults = {
 	char = {
@@ -359,7 +368,9 @@ function GoGoMount:OnInitialize()
 	self:RegisterEvent("SKILL_LINES_CHANGED")
 	self:RegisterEvent("BAG_UPDATE_DELAYED")
 	self:RegisterEvent("SPELLS_CHANGED")
-	self:RegisterEvent("COMPANION_LEARNED")
+	if not isVanilla then
+		self:RegisterEvent("COMPANION_LEARNED")
+	end
 	self:RegisterEvent("TAXIMAP_OPENED")
 	self:RegisterEvent("UI_ERROR_MESSAGE")
 	self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
@@ -431,8 +442,13 @@ function GoGoMount:SKILL_LINES_CHANGED(event)
 	self:DebugAddLine(event)
 	for skillIndex = 1, GetNumSkillLines() do
 		local skillName, isHeader, _, skillRank = GetSkillLineInfo(skillIndex)
-		if not isHeader and playerSkills[skillName]  then
-			playerSkills[skillName] = skillRank
+		if not isHeader then
+			if playerSkills[skillName] then
+				playerSkills[skillName] = skillRank
+			end
+			if ridingSkills[skillName] then
+				ridingSkills[skillName] = skillRank
+			end
 		end
 	end
 end
@@ -515,7 +531,7 @@ function GoGoMount:PreClick(button)
 		self:FillButton(button)
 	end
 
-	if IsMounted() or CanExitVehicle() then
+	if IsMounted() or (CanExitVehicle and CanExitVehicle()) then
 		self:DebugAddLine("Player is mounted and is being dismounted.")
 		self:Dismount()
 	elseif playerClass == "DRUID" and not InCombatLockdown() and self:IsShifted() then
@@ -564,9 +580,12 @@ function GoGoMount:GetMount()
 
 	local mounts = {}
 	local GoGo_FilteredMounts = {}
-	local ridingLevel = playerSkills[L['Riding']]
+	local ridingLevel = ridingSkills[L['Riding']]
 	if self.db.char.debug then
 		for k,v in pairs(playerSkills) do
+			self:DebugAddLine(k, "=", v)
+		end
+		for k,v in pairs(ridingSkills) do
 			self:DebugAddLine(k, "=", v)
 		end
 	end
@@ -690,7 +709,7 @@ function GoGoMount:GetMount()
 		end
 
 		-- no epic flyers found - add druid swift flight if available
-		if #mounts == 0 and playerClass == "DRUID" and self:SpellInBook(addonTable.SpellDB.FastFlightForm) then
+		if not isVanilla and #mounts == 0 and playerClass == "DRUID" and self:SpellInBook(addonTable.SpellDB.FastFlightForm) then
 			tinsert(mounts, addonTable.SpellDB.FastFlightForm)
 		end
 
@@ -700,7 +719,7 @@ function GoGoMount:GetMount()
 		end
 
 		-- no slow flying mounts found - add druid flight if available
-		if #mounts == 0 and playerClass == "DRUID" and self:SpellInBook(addonTable.SpellDB.FlightForm) then
+		if not isVanilla and #mounts == 0 and playerClass == "DRUID" and self:SpellInBook(addonTable.SpellDB.FlightForm) then
 			tinsert(mounts, addonTable.SpellDB.FlightForm)
 		end
 	end
@@ -710,7 +729,7 @@ function GoGoMount:GetMount()
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 35)
 	end
 
-	if #mounts == 0 and #GoGo_FilteredMounts >= 1 then  -- no flying mounts selected yet - try to use loaned mounts
+	if not isVanilla and #mounts == 0 and #GoGo_FilteredMounts >= 1 then  -- no flying mounts selected yet - try to use loaned mounts
 		GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 52) or {}
 		if #GoGo_TempMounts >= 1 and IsOnMapID({118, 119, 120}) then
 			mounts = FilterMountsIn(GoGo_FilteredMounts, 52)
@@ -719,7 +738,7 @@ function GoGoMount:GetMount()
 	end
 	
 	-- Set the oculus mounts as the only mounts available if we're in the oculus, not skiping flying and have them in inventory
-	if #mounts == 0 and #GoGo_FilteredMounts >= 1 and playerZone == L["The Oculus"] and not self.SkipFlyingMount then
+	if not isVanilla and #mounts == 0 and #GoGo_FilteredMounts >= 1 and playerZone == L["The Oculus"] and not self.SkipFlyingMount then
 		GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 54) or {}
 		if #GoGo_TempMounts >= 1 then
 			mounts = GoGo_TempMounts
@@ -733,32 +752,33 @@ function GoGoMount:GetMount()
 	end
 	
 	-- Select ground mounts
-	if #mounts == 0 and self:CanRide() then
+	if #mounts == 0 then
 		self:DebugAddLine("Looking for ground mounts since we can't fly.")
-		
-		if ridingLevel < 150 then
-			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 37)
-		end
-		if ridingLevel < 75 then
+		if self:CanRide() then
+			local canUseEpic = ridingLevel >= 150 or (isVanilla and UnitLevel("player") == 60)
+			if not canUseEpic then
+				GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 37)
+			end
+			GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 21)
+			if not canUseEpic then
+				GoGo_TempMounts = FilterMountsOut(GoGo_TempMounts, 29)
+			end
+			if ridingLevel <= 225 and canFly then
+				mounts = FilterMountsOut(GoGo_TempMounts, 3)
+			else
+				mounts = GoGo_TempMounts
+			end
+			if #mounts == 0 then
+				mounts = FilterMountsIn(GoGo_FilteredMounts, 20)
+			end
+			if #mounts == 0 then
+				mounts = FilterMountsIn(GoGo_FilteredMounts, 25)
+			end
+		else
 			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 38)
 		end
-		GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 21)
-		if ridingLevel < 150 then
-			GoGo_TempMounts = FilterMountsOut(GoGo_TempMounts, 29)
-		end
-		if ridingLevel <= 225 and canFly then
-			mounts = FilterMountsOut(GoGo_TempMounts, 3)
-		else
-			mounts = GoGo_TempMounts
-		end
-		if #mounts == 0 then
-			mounts = FilterMountsIn(GoGo_FilteredMounts, 20)
-		end
-		if #mounts == 0 then
-			mounts = FilterMountsIn(GoGo_FilteredMounts, 25)
-		end
 	end
-	
+
 	if #GoGo_FilteredMounts >= 1 then
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 37)
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 38)
@@ -801,7 +821,7 @@ end
 function GoGoMount:Dismount(button)
 	if IsMounted() then
 		Dismount()
-	elseif CanExitVehicle() then	
+	elseif CanExitVehicle and CanExitVehicle() then	
 		VehicleExit()
 	elseif playerClass == "DRUID" and button then
 		local isShifted = self:IsShifted()
@@ -830,16 +850,18 @@ end
 function GoGoMount:BuildMountSpellList()
 	self.MountSpellList = {}
 	local superFastFound
-	for slot = 1, GetNumCompanions("MOUNT") do
-		local _, _, SpellID = GetCompanionInfo("MOUNT", slot)
-		tinsert(self.MountSpellList, SpellID)
-		local mountData = addonTable.MountDB[SpellID]
-		if mountData and mountData[24] then
-			superFastFound = true
+	if not isVanilla then
+		for slot = 1, GetNumCompanions("MOUNT") do
+			local _, _, SpellID = GetCompanionInfo("MOUNT", slot)
+			tinsert(self.MountSpellList, SpellID)
+			local mountData = addonTable.MountDB[SpellID]
+			if mountData and mountData[24] then
+				superFastFound = true
+			end
 		end
-	end
-	if superFastFound and not self.SuperFastFlyingFound then
-		self:ApplySuperFast()
+		if superFastFound and not self.SuperFastFlyingFound then
+			self:ApplySuperFast()
+		end
 	end
 	self:DebugAddLine("Added", #self.MountSpellList, "mounts to spell list.")
 	return self.MountSpellList
@@ -848,8 +870,8 @@ end
 function GoGoMount:BuildMountItemList()
 	self.MountItemList = {}
 	for bag = BACKPACK_CONTAINER, NUM_BAG_SLOTS do
-		for slot = 1, C_Container.GetContainerNumSlots(bag) do
-			local itemId = C_Container.GetContainerItemID(bag, slot)
+		for slot = 1, GetContainerNumSlots(bag) do
+			local itemId = GetContainerItemID(bag, slot)
 			if addonTable.MountsItems[itemId] then
 				tinsert(self.MountItemList, itemId)
 			end
@@ -958,6 +980,11 @@ function GoGoMount:FillButton(button, mount)
 end
 
 function GoGoMount:CanFly()
+	if isVanilla then
+		self:DebugAddLine("Failed - Flying Doesn't Exist In Vanilla")
+		return false
+	end
+
 	if UnitLevel("player") < 60 then
 		self:DebugAddLine("Failed - Player under level 60")
 		return false
@@ -1020,10 +1047,11 @@ function GoGoMount:CanFly()
 end
 
 function GoGoMount:CanRide()
-	local level = UnitLevel("player")
-	if level >= 20 then
-		self:DebugAddLine("Passed - Player is over level 20.")
-		return true
+	for k,v in pairs(ridingSkills) do
+		if v > 0 then
+			self:DebugAddLine("Passed - Player " ..k.." level is "..v..'.')
+			return true
+		end
 	end
 end
 
