@@ -44,16 +44,23 @@ if isVanilla then
 
 	addonTable.MountDB = {
 
-		[5655] = {[4] = true, [14] = true, [20] = true, [38] = true},  -- Chestnut Mare
+		[5655]  = {[14] = true, [20] = true, [38] = true},  -- Chestnut Mare
 
 
-		[15290] = {[4] = true,  [14] = true, [20] = true, [38] = true},  -- Brown Kodo
+		[15290] = {[14] = true, [20] = true, [38] = true},  -- Brown Kodo
+		[18793] = {[16] = true, [21] = true, [37] = true},  -- Great White Kodo
 		
 		-- Below are not used for detection, only used to prevent being reported as unknown mounts
-		[783] = {[28] = true}, -- GOGO_DRUID_TRAVELFORM
-		[2645] = {[28] = true}, -- GOGO_SHAMAN_GHOSTWOLF
+		[783] = {[28] = true, spell = true}, -- GOGO_DRUID_TRAVELFORM
+		[2645] = {[28] = true, spell = true}, -- GOGO_SHAMAN_GHOSTWOLF
 	
 	}
+
+	for k,v in pairs(addonTable.MountDB) do
+		if not v.spell then
+			v[4] = true
+		end
+	end
 
 	addonTable.MountsItems = addonTable.MountDB
 
