@@ -33,6 +33,7 @@ addonTable.SpellDB = {
 	Tailoring = 3908,
 	KodoRiding = 18996,
 	HorseRiding = 824,
+	UndeadRiding = 10906,
 }
 
 if isVanilla then
@@ -49,6 +50,10 @@ if isVanilla then
 
 		[15290] = {[14] = true, [20] = true, [38] = true},  -- Brown Kodo
 		[18793] = {[16] = true, [21] = true, [37] = true},  -- Great White Kodo
+
+		
+		[13331] = {[14] = true, [20] = true, [38] = true},  -- Red Skeletal Horse
+		[18791] = {[16] = true, [21] = true, [37] = true},  -- Purple Skeletal Warhorse
 		
 		-- Below are not used for detection, only used to prevent being reported as unknown mounts
 		[783] = {[28] = true, spell = true}, -- GOGO_DRUID_TRAVELFORM

@@ -27,6 +27,7 @@ local ridingSkills = isVanilla and {
 	[L["Riding"]] = 0,
 	[GetSpellInfo(addonTable.SpellDB.KodoRiding)] = 0,
 	[GetSpellInfo(addonTable.SpellDB.HorseRiding)] = 0,
+	[GetSpellInfo(addonTable.SpellDB.UndeadRiding)] = 0,
 } or {
 	[L["Riding"]] = 0,
 }
