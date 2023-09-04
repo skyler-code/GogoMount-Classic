@@ -35,6 +35,7 @@ local ridingSkills = isVanilla and {
 local savedDBDefaults = {
 	char = {
         autoDismount = true,
+		autoLance = true,
 		debug = false,
 		druidClickForm = true,
 		druidFlightForm = true,
@@ -372,10 +373,11 @@ function GoGoMount:OnInitialize()
 	self:RegisterEvent("SPELLS_CHANGED")
 	if not isVanilla then
 		self:RegisterEvent("COMPANION_LEARNED")
+		self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+		self:RegisterEvent("UNIT_EXITED_VEHICLE")
 	end
 	self:RegisterEvent("TAXIMAP_OPENED")
 	self:RegisterEvent("UI_ERROR_MESSAGE")
-	self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 	self:RegisterEvent("UPDATE_BINDINGS")
 	self:RegisterEvent("VARIABLES_LOADED", "UPDATE_BINDINGS")
 	self:RegisterEvent("ZONE_CHANGED")
@@ -429,6 +431,16 @@ function GoGoMount:UI_ERROR_MESSAGE(event, errorType, errorMsg)
 	if self.db.char.autoDismount and GOGO_ERRORS[errorMsg] and not IsFlying() then
 		self:Dismount()
 	end
+	if self.db.char.autoLance and errorMsg == SPELL_FAILED_CUSTOM_ERROR_60 then
+		self:EquipLance()
+	end
+end
+
+function GoGoMount:UNIT_EXITED_VEHICLE(event)
+	if self.prevItem then
+		EquipItemByName(self.prevItem)
+		self.prevItem = nil
+	end
 end
 
 function GoGoMount:PLAYER_ENTERING_WORLD(event)
@@ -459,6 +471,22 @@ function GoGoMount:BAG_UPDATE_DELAYED(event)
 	self:DebugAddLine(event)
 	self:BuildMountItemList()
 	self:BuildMountList()
+end
+
+local lanceIds = {
+	46070, -- Horde Lance
+	46069, -- Alliance Lance
+	46106, -- Argent Lance
+}
+
+function GoGoMount:EquipLance()
+	for k,v in ipairs(lanceIds) do
+		if GetItemCount(v) > 0 then
+			self.prevItem = GetInventoryItemID("player", INVSLOT_MAINHAND)
+			EquipItemByName(v)
+			break
+		end
+	end
 end
 
 function GoGoMount:OnSlash(input)
@@ -1175,6 +1203,15 @@ function GoGoMount:GetOptions()
 				width = "full",
 				get = function() return self.db.char.globalPrefMount end,
 				set = function(info, v) self.db.char.globalPrefMount = v end,
+			},
+			autoLance = {
+				name = L["Automatically equip lance when trying to mount argent steeds."],
+				type = "toggle",
+				order = getOrderId(),
+				width = "full",
+				hidden = isVanilla,
+				get = function() return self.db.char.autoLance end,
+				set = function(info, v) self.db.char.autoLance = v end,
 			},
 			debug = {
 				name = L["Print Debug messages"],
