@@ -678,7 +678,7 @@ function GoGoMount:GetMount()
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 53)
 	end
 	
-	if playerZone ~= C_Map.GetMapInfo(319).name then
+	if playerZone ~= L["Ahn'Qiraj"] then
 		self:DebugAddLine("Removing AQ40 mounts since we are not in AQ40.")
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 50)
 	end
