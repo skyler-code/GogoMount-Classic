@@ -1,6 +1,6 @@
 local addonName, addonTable = ...
 
-local tinsert, tremove = tinsert, tremove
+local tinsert, tremove, tconc = tinsert, tremove, table.concat
 local GetRealZoneText, InCombatLockdown, IsFlying, GetZoneText, GetSubZoneText, IsOutdoors, BlizzIsFlyableArea, IsFalling, IsSwimming
 	= GetRealZoneText, InCombatLockdown, IsFlying, GetZoneText, GetSubZoneText, IsOutdoors, IsFlyableArea, IsFalling, IsSwimming
 local IsMounted, CanExitVehicle, GetMinimapZoneText, UnitAura, GetUnitSpeed, GetNumSkillLines, GetSkillLineInfo, GetSpellBookItemName
@@ -28,6 +28,8 @@ local ridingSkills = isVanilla and {
 	[GetSpellInfo(addonTable.SpellDB.KodoRiding)] = 0,
 	[GetSpellInfo(addonTable.SpellDB.HorseRiding)] = 0,
 	[GetSpellInfo(addonTable.SpellDB.UndeadRiding)] = 0,
+	[GetSpellInfo(addonTable.SpellDB.TigerRiding)] = 0,
+	[GetSpellInfo(addonTable.SpellDB.RamRiding)] = 0,
 } or {
 	[L["Riding"]] = 0,
 }
@@ -41,7 +43,6 @@ local savedDBDefaults = {
 		druidFlightForm = true,
 		enabled = true,
 		filteredZones = {},
-		genericFastFlyer = false,
 		globalIgnoreMounts = {},
 		globalPrefMount = false,
 		globalPrefMounts = {},
@@ -67,6 +68,16 @@ local function tableHasAtLeastOneElement(val)
 	if val and type(val) == "table" then
 		for k,v in pairs(val) do
 			return true
+		end
+	end
+end
+
+local function valueExistsInTable(searchTable, value)
+	if searchTable and type(searchTable) == "table" then
+		for k,v in pairs(searchTable) do
+			if v == value then
+				return k
+			end
 		end
 	end
 end
@@ -133,7 +144,6 @@ local GOGO_COMMANDS = {
 	end,
 	["clear"] = function(self)
 		if self.db.char.globalPrefMount then
-			self:SetCharVar('genericFastFlyer', nil)
 			if not InCombatLockdown() then
 				for i, button in ipairs({GoGoButton1, GoGoButton2}) do
 					self:FillButton(button)
@@ -164,7 +174,6 @@ local GOGO_COMMANDS = {
 	end,
 	["help"] = function(self)
 		self:Msg("auto")
-		self:Msg("genericFastFlyer")
 		self:Msg("updatenotice")
 		self:Msg("mountnotice")
 		if playerClass == "DRUID" then self:Msg("druidClickForm") end
@@ -202,15 +211,6 @@ local GOGO_MESSAGES = {
 			return "Autodismount inactive - </gogo auto> to toggle"
 		end
 	end,
-	["genericFastFlyer"] = function(self)
-		if not self:CanFly() then
-			return
-		elseif self.db.char.genericFastFlyer then
-			return "Considering epic flying mounts 310% - 280% speeds the same for random selection - </gogo genericFastFlyer> to toggle"
-		else
-			return "Considering epic flying mounts 310% - 280% speeds different for random selection - </gogo genericFastFlyer> to toggle"
-		end
-	end,
 	["ignore"] = function(self)
 		local list = ""
 		if tableHasAtLeastOneElement(self.db.char.globalIgnoreMounts) then
@@ -229,8 +229,8 @@ local GOGO_MESSAGES = {
 		local msg = ""
 		if not self.db.char.globalPrefMount then
 			local list = ""
-			if self.db.char[playerZone] then
-				list = list .. self:GetIDName(self.db.char[playerZone])
+			if self.db.char.filteredZones[playerZone] then
+				list = list .. self:GetIDName(self.db.char.filteredZones[playerZone])
 				msg = playerZone..": "..list.." - </gogo clear> to clear"
 			else
 				msg = playerZone..": ?".." - </gogo ItemLink> or </gogo SpellName> to add"
@@ -248,8 +248,8 @@ local GOGO_MESSAGES = {
 			else
 				msg =  "Global Preferred Mounts: ?".." - </gogo ItemLink> or </gogo SpellName> to add"
 			end
-			if self.db.char[playerZone] then
-				list = list .. self:GetIDName(self.db.char[playerZone])
+			if self.db.char.filteredZones[playerZone] then
+				list = list .. self:GetIDName(self.db.char.filteredZones[playerZone])
 				msg = msg .. "\n" .. playerZone ..": "..list.." - Disable global mount preferences to change."
 			end
 			return msg
@@ -278,7 +278,9 @@ function GoGoMount:ParseSpellbook()
 		local offset, numSlots = select(3, GetSpellTabInfo(i))
 		for j = offset+1, offset+numSlots do
 			local spellName, _, spellID = GetSpellBookItemName(j, BOOKTYPE_SPELL)
-			self.playerSpellbook[spellID] = spellName
+			if spellID then
+				self.playerSpellbook[spellID] = spellName
+			end
 		end
 	end
 end
@@ -310,10 +312,7 @@ function GoGoMount:GetPlayerAura(spell, filter)
 end
 
 function GoGoMount:CancelPlayerBuff(spell)
-	local auraIndex = self:GetPlayerAura(spell)
-	if auraIndex then
-		CancelUnitBuff("player", auraIndex)
-	end
+	CancelSpellByName( type(spell) == "number" and GetSpellInfo(spell) or spell)
 end
 
 function GoGoMount:SetCharVar(varName, value)
@@ -375,6 +374,7 @@ function GoGoMount:OnInitialize()
 		self:RegisterEvent("COMPANION_LEARNED")
 		self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 		self:RegisterEvent("UNIT_EXITED_VEHICLE")
+		self:RegisterEvent("NEW_MOUNT_ADDED")
 	end
 	self:RegisterEvent("TAXIMAP_OPENED")
 	self:RegisterEvent("UI_ERROR_MESSAGE")
@@ -413,6 +413,8 @@ function GoGoMount:ZONE_CHANGED(event)
 	self:DebugAddLine(event)
 	playerZone = GetRealZoneText()
 	playerSubZone = GetSubZoneText()
+	self:BuildMountSpellList()
+	self:BuildMountList()
 end
 
 function GoGoMount:TAXIMAP_OPENED(event)
@@ -436,8 +438,8 @@ function GoGoMount:UI_ERROR_MESSAGE(event, errorType, errorMsg)
 	end
 end
 
-function GoGoMount:UNIT_EXITED_VEHICLE(event)
-	if self.prevItem then
+function GoGoMount:UNIT_EXITED_VEHICLE(event, unit)
+	if unit == 'player' and self.prevItem then
 		EquipItemByName(self.prevItem)
 		self.prevItem = nil
 	end
@@ -468,7 +470,24 @@ function GoGoMount:SKILL_LINES_CHANGED(event)
 end
 
 function GoGoMount:BAG_UPDATE_DELAYED(event)
+	if InCombatLockdown() then
+		return 
+	end
 	self:DebugAddLine(event)
+	self:BuildMountItemList()
+	self:BuildMountList()
+end
+
+function GoGoMount:MOUNT_JOURNAL_USABILITY_CHANGED(event)
+	self:DebugAddLine(event)
+	self:BuildMountSpellList()
+	self:BuildMountItemList()
+	self:BuildMountList()
+end
+
+function GoGoMount:NEW_MOUNT_ADDED(event)
+	self:DebugAddLine(event)
+	self:BuildMountSpellList()
 	self:BuildMountItemList()
 	self:BuildMountList()
 end
@@ -494,7 +513,7 @@ function GoGoMount:OnSlash(input)
 	if arg1 then
 		if GOGO_COMMANDS[arg1:lower()] then
 			GOGO_COMMANDS[arg1:lower()](self, arg2)
-		elseif arg1:find("spell:%d+") or arg1:find("item:%d+") then
+		elseif arg1:find("spell:%d+") or arg1:find("item:%d+") or arg1:find("mount:%d+") then
 			local idtype, itemid = parseForItemId(arg1)
 			self:AddPrefMount(itemid)
 			self:Msg("pref")
@@ -592,28 +611,47 @@ function GoGoMount:GetMount()
 			elseif playerHasTalent("FeralSwiftness") then
 				return self:SpellInBook(addonTable.SpellDB.CatForm)
 			end
-			return
-		end
-		if (IsSwimming() or IsFalling() or IsMoving()) then
+		elseif (IsSwimming() or IsFalling() or IsMoving()) then
 			self:DebugAddLine("We are a druid and we're falling, swimming or moving.  Changing shape form.")
 			return self:SpellInBook(self.classSpell)
 		end
 	elseif playerClass == "SHAMAN" and IsOutdoors() and IsMoving() and playerHasTalent("ImpGhostWolf") then
 		self:DebugAddLine("We are a shaman, we're outdoors, and we're moving.  Changing shape form.")
 		return self:SpellInBook(self.classSpell)
-	elseif playerClass == "HUNTER" and IsMoving() then
-		self:DebugAddLine("We are a hunter and we're moving.  Checking for aspects.")
-		local cheetah = self:SpellInBook(addonTable.SpellDB.AspectCheetah)
-		if cheetah then
-			return cheetah
+	elseif playerClass == "HUNTER" then
+		if self.reapplyHawk and self:GetPlayerAura(addonTable.SpellDB.AspectCheetah) then
+			self:DebugAddLine("We are a hunter, we have cheetah and we previously had hawk.  Reapplying hawk.")
+			local hawk = self:SpellInBook(self.reapplyHawk)
+			self.reapplyHawk = nil
+			if hawk then
+				return hawk
+			end
+		elseif IsMoving() then
+			self:DebugAddLine("We are a hunter and we're moving.  Checking for aspects.")
+			local hawkID = select(11, self:GetPlayerAura(GetSpellInfo(addonTable.SpellDB.AspectHawk)))
+			if hawkID then
+				self:DebugAddLine("We have aspect of the hawk.")
+				self.reapplyHawk = hawkID
+			end
+			local cheetah = self:SpellInBook(addonTable.SpellDB.AspectCheetah)
+			if cheetah then
+				return cheetah
+			end
 		end
 	end
 
 	self:DebugAddLine("Passed Druid / Shaman forms - nothing selected.")
 
+	if self.db.char.useMountJournalFavorite and C_MountJournal and C_MountJournal.SummonByID then
+		C_MountJournal.SummonByID(0)
+		self:DebugAddLine("Using Blizzard favorite mount")
+		return
+	end
+
 	local mounts = {}
 	local GoGo_FilteredMounts = {}
 	local ridingLevel = ridingSkills[L['Riding']]
+	local canFly = self:CanFly()
 	if self.db.char.debug then
 		for k,v in pairs(playerSkills) do
 			self:DebugAddLine(k, "=", v)
@@ -623,21 +661,53 @@ function GoGoMount:GetMount()
 		end
 	end
 
+	-- Set the oculus mounts as the only mounts available if we're in the oculus, not skiping flying and have them in inventory
+	-- if #mounts == 0 and #self.MountList >= 1 and playerZone == L["The Oculus"] and not self.SkipFlyingMount then
+	-- 	GoGo_TempMounts = FilterMountsIn(self.MountList, 54) or {}
+	-- 	if #GoGo_TempMounts >= 1 then
+	-- 		mounts = GoGo_TempMounts
+	-- 		self:DebugAddLine("In the Oculus, Oculus only mount found, using.")
+	-- 	else
+	-- 		self:DebugAddLine("In the Oculus, no oculus mount found in inventory.")
+	-- 	end
+	-- else
+	-- 	GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 54)
+	-- 	self:DebugAddLine("Not in Oculus or forced ground mount only.")
+	-- end
+
 	if #mounts == 0 then
-		if self.db.char.filteredZones[playerZone] then
-			GoGo_FilteredMounts = self.db.char.filteredZones[playerZone]
+		local zoneFavs = self.db.char.filteredZones[playerZone]
+		if zoneFavs then
+			self:DebugAddLine("Found", #zoneFavs, "zone favorites.")
+			GoGo_FilteredMounts = zoneFavs
 		end
 	end
 	self:DebugAddLine("Checked for zone favorites.")
 
-	if #mounts == 0 and not GoGo_FilteredMounts or #GoGo_FilteredMounts == 0 then
-		if self.db.char.globalPrefMounts then
-			GoGo_FilteredMounts = self.db.char.globalPrefMounts
+	if #mounts == 0 and (not GoGo_FilteredMounts or #GoGo_FilteredMounts == 0) then
+		if self.db.char.globalPrefMounts and #self.db.char.globalPrefMounts > 0 then
+			local usableGlobalMounts = {}
+			if not isVanilla then
+				for k, v in ipairs(self.db.char.globalPrefMounts) do
+					local mountID = C_MountJournal.GetMountFromSpell(v)
+					if mountID and C_MountJournal.GetMountUsabilityByID(mountID,false) then
+						tinsert(usableGlobalMounts, v)
+					end
+				end
+			else
+				usableGlobalMounts = self.db.char.globalPrefMounts
+			end
+			if #usableGlobalMounts > 0 then
+				self:DebugAddLine("Using global favorites.")
+				GoGo_FilteredMounts = usableGlobalMounts
+			else
+				self:DebugAddLine("Had global favorites but none were usable.")
+			end
 		end
 		self:DebugAddLine("Checked for global favorites.")
 	end
 
-	if #mounts == 0 and not GoGo_FilteredMounts or #GoGo_FilteredMounts == 0 then
+	if #mounts == 0 and (not GoGo_FilteredMounts or #GoGo_FilteredMounts == 0) then
 		self:DebugAddLine("Checking for spell and item mounts.")
 		GoGo_FilteredMounts = self.MountList
 		if not GoGo_FilteredMounts or #GoGo_FilteredMounts == 0 then
@@ -652,7 +722,7 @@ function GoGoMount:GetMount()
 	end
 	
 	local GoGo_TempMounts = {}
-	local engineeringLevel = playerSkills[GetSpellInfo(addonTable.SpellDB.Tailoring)]
+	local engineeringLevel = playerSkills[GetSpellInfo(addonTable.SpellDB.Engineering)]
 	if engineeringLevel < 375 then
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 46)
 	end
@@ -692,16 +762,12 @@ function GoGoMount:GetMount()
 		self:DebugAddLine("Looking for water speed increase mounts since we're in water.")
 		mounts = FilterMountsIn(GoGo_FilteredMounts, 5) or {}
 	end
-
-	local canFly = self:CanFly()
 	
 	if #mounts == 0 and canFly and not self.SkipFlyingMount then
 		self:DebugAddLine("Looking for flying mounts since we past flight checks.")
 		if ridingLevel < 225 then
-			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 36)
-		end
-		if ridingLevel < 300 then
 			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 35)
+			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 36)
 		end
 
 		-- Druid stuff... 
@@ -715,26 +781,9 @@ function GoGoMount:GetMount()
 			GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 9)
 			mounts = FilterMountsIn(GoGo_TempMounts, 24)
 		end
-		if self.db.char.genericFastFlyer then
-			local GoGo_TempMountsA = FilterMountsIn(GoGo_TempMounts, 23)
-			if ridingLevel < 300 then
-				GoGo_TempMountsA = FilterMountsOut(GoGo_TempMountsA, 29)
-			end
-			if GoGo_TempMountsA then
-				for k, v in ipairs(GoGo_TempMountsA) do
-					tinsert(mounts, v)
-				end
-			end
-			local GoGo_TempMountsA = FilterMountsIn(GoGo_TempMounts, 26)
-			if GoGo_TempMountsA then
-				for k, v in ipairs(GoGo_TempMountsA) do
-					tinsert(mounts, v)
-				end
-			end
-		end
 		if #mounts == 0 then
 			GoGo_TempMountsA = FilterMountsIn(GoGo_TempMounts, 23)
-			if ridingLevel < 300 then
+			if ridingLevel < 225 then
 				mounts = FilterMountsOut(GoGo_TempMountsA, 29)
 			else
 				mounts = GoGo_TempMountsA
@@ -761,7 +810,7 @@ function GoGoMount:GetMount()
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 36)
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 35)
 	end
-
+	
 	if not isVanilla and #mounts == 0 and #GoGo_FilteredMounts >= 1 then  -- no flying mounts selected yet - try to use loaned mounts
 		GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 52) or {}
 		if #GoGo_TempMounts >= 1 and IsOnMapID({118, 119, 120}) then
@@ -769,31 +818,35 @@ function GoGoMount:GetMount()
 		end
 		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 52)
 	end
-	
-	-- Set the oculus mounts as the only mounts available if we're in the oculus, not skiping flying and have them in inventory
-	if not isVanilla and #mounts == 0 and #GoGo_FilteredMounts >= 1 and playerZone == L["The Oculus"] and not self.SkipFlyingMount then
-		GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 54) or {}
-		if #GoGo_TempMounts >= 1 then
-			mounts = GoGo_TempMounts
-			self:DebugAddLine("In the Oculus, Oculus only mount found, using.")
+
+	-- Set the Ashenvale mounts as the only mounts available if we're in the Ashenvale, not skiping flying and have them in inventory
+	if isVanilla then
+		if #mounts == 0 and #GoGo_FilteredMounts >= 1 and IsOnMapID(1440) then
+			GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 1440) or {}
+			if #GoGo_TempMounts >= 1 then
+				mounts = GoGo_TempMounts
+				self:DebugAddLine("In Ashenvale, Ashenvale only mount found, using.")
+			else
+				self:DebugAddLine("In Ashenvale, no Ashenvale mount found in inventory.")
+			end
 		else
-			self:DebugAddLine("In the Oculus, no oculus mount found in inventory.")
+			GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 1440)
+			self:DebugAddLine("Not in Ashenvale.")
 		end
-	else
-		GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 54)
-		self:DebugAddLine("Not in Oculus or forced ground mount only.")
 	end
 	
 	-- Select ground mounts
 	if #mounts == 0 then
 		if self:CanRide() then
 			self:DebugAddLine("Looking for ground mounts since we can't fly.")
-			local canUseEpic = ridingLevel >= 150 or (isVanilla and UnitLevel("player") == 60)
-			if not canUseEpic then
-				GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 37)
+			if isVanilla then
+				local canUseEpic = ridingLevel >= 150 or (isVanilla and UnitLevel("player") == 60)
+				if not canUseEpic then
+					GoGo_FilteredMounts = FilterMountsOut(GoGo_FilteredMounts, 37)
+				end
 			end
 			GoGo_TempMounts = FilterMountsIn(GoGo_FilteredMounts, 21)
-			if not canUseEpic then
+			if isVanilla and not canUseEpic then
 				GoGo_TempMounts = FilterMountsOut(GoGo_TempMounts, 29)
 			end
 			if ridingLevel <= 225 and canFly then
@@ -878,23 +931,26 @@ function GoGoMount:BuildMountList()
 		end
 	end
 	return self.MountList
-end 
+end
 
 function GoGoMount:BuildMountSpellList()
 	self.MountSpellList = {}
+	if not C_MountJournal then
+		return self.MountSpellList
+	end
 	local superFastFound
-	if not isVanilla then
-		for slot = 1, GetNumCompanions("MOUNT") do
-			local _, _, SpellID = GetCompanionInfo("MOUNT", slot)
+	for i, mountID in ipairs(C_MountJournal.GetMountIDs()) do
+		local name, SpellID, _, _, isUsable = C_MountJournal.GetMountInfoByID(mountID);
+		if isUsable then
 			tinsert(self.MountSpellList, SpellID)
 			local mountData = addonTable.MountDB[SpellID]
 			if mountData and mountData[24] then
 				superFastFound = true
 			end
 		end
-		if superFastFound and not self.SuperFastFlyingFound then
-			self:ApplySuperFast()
-		end
+	end
+	if superFastFound and not self.SuperFastFlyingFound then
+		self:ApplySuperFast()
 	end
 	self:DebugAddLine("Added", #self.MountSpellList, "mounts to spell list.")
 	return self.MountSpellList
@@ -927,44 +983,27 @@ function GoGoMount:IsShifted()
 	self:DebugAddLine("Not shifted")
 end
 
-function GoGoMount:globalPrefMountExists(spell)
-	for k, v in pairs(self.db.char.globalPrefMounts) do
-		if v == spell then
-			return true
-		end
-	end
-end
-
 function GoGoMount:AddPrefMount(spell)
 	self:DebugAddLine("Preference " .. spell)
 
 	if not self.db.char.globalPrefMount then
 		if not self.db.char.filteredZones[playerZone] then self.db.char.filteredZones[playerZone] = {} end
-		tinsert(self.db.char.filteredZones[playerZone], spell)
-		if #self.db.char.filteredZones[playerZone] > 1 then
-			local i = 2
-			repeat
-				if self.db.char.filteredZones[playerZone][i] == self.db.char.filteredZones[playerZone][i - 1] then
-					tremove(self.db.char.filteredZones[playerZone], i)
-				else
-					i = i + 1
-				end
-			until i > #self.db.char.filteredZones[playerZone]
+		local mountIndex = valueExistsInTable(self.db.char.filteredZones[playerZone], spell)
+		if mountIndex then
+			tremove(self.db.char.filteredZones[playerZone], mountIndex)
+		else
+			tinsert(self.db.char.filteredZones[playerZone], spell)
+		end
+		if #self.db.char.filteredZones[playerZone] == 0 then
+			self.db.char.filteredZones[playerZone] = nil
 		end
 	else
 		if not self.db.char.globalPrefMounts then self.db.char.globalPrefMounts = {} end
-		if not self:globalPrefMountExists(spell) then
+		local mountIndex = valueExistsInTable(self.db.char.globalPrefMounts, spell)
+		if mountIndex then
+			tremove(self.db.char.globalPrefMounts, mountIndex)
+		else
 			tinsert(self.db.char.globalPrefMounts, spell)
-			if #self.db.char.globalPrefMounts > 1 then
-				local i = 2
-				repeat
-					if self.db.char.globalPrefMounts[i] == self.db.char.globalPrefMounts[i - 1] then
-						tremove(self.db.char.globalPrefMounts, i)
-					else
-						i = i + 1
-					end
-				until i > #self.db.char.globalPrefMounts
-			end
 		end
 	end
 end
@@ -986,7 +1025,7 @@ function GoGoMount:GetIDName(itemid)
 			local valToUse = tableItem == true and k or tableItem
 			tinsert(idTable, self:GetIDName(valToUse))
 		end
-		local idString = table.concat(idTable, ", ")
+		local idString = tconc(idTable, ", ")
 		self:DebugAddLine("Itemname string is " .. idString)
 		return idString
 	end
@@ -1075,6 +1114,10 @@ function GoGoMount:CanFly()
 		end
 	end
 
+	if self:SpellInBook(addonTable.SpellDB.FlightMasterLicense) and IsFlyableArea() then
+		return true
+	end
+
 	self:DebugAddLine("Failed - Player does not meet any flyable conditions.")
 	return false  -- we can't fly anywhere else
 end
@@ -1122,18 +1165,26 @@ end
 function GoGoMount:SetClassSpell()
 	local classSpells = {
 		["DRUID"] = function()
-			local travelForm = self:SpellInBook(addonTable.SpellDB.TravelForm) or (playerHasTalent("FelineSwiftness") and self:SpellInBook(addonTable.SpellDB.CatForm)) or nil
-			local aquaForm = self:SpellInBook(addonTable.SpellDB.AquaForm)
+			local shiftInfo = {}
 			local catForm = self:SpellInBook(addonTable.SpellDB.CatForm)
+			local travelForm = self:SpellInBook(addonTable.SpellDB.TravelForm) or (playerHasTalent("FeralSwiftness") and catForm) or nil
+			local aquaForm = self:SpellInBook(addonTable.SpellDB.AquaForm)
+			local flightForm
+			if not self.SkipFlyingMount and self:CanFly() then
+				flightForm = self:SpellInBook(addonTable.SpellDB.FastFlightForm) or self:SpellInBook(addonTable.SpellDB.FlightForm)
+			end
 			if aquaForm then
-				local flightForm = (not self.SkipFlyingMount and self:CanFly()) and (self:SpellInBook(addonTable.SpellDB.FastFlightForm) or self:SpellInBook(addonTable.SpellDB.FlightForm))
+				tinsert(shiftInfo, "[swimming] "..aquaForm)
+			end
+			if travelForm then
 				if flightForm then
-					return "[swimming] "..aquaForm.."; [combat]"..travelForm.."; "..flightForm
+					tinsert(shiftInfo, "[combat] "..travelForm)
+					tinsert(shiftInfo, flightForm)
 				else
-					return "[swimming] "..aquaForm.."; "..travelForm
+					tinsert(shiftInfo, travelForm)
 				end
 			end
-			return travelForm
+			return tconc(shiftInfo, "; ")
 		end,
 		["SHAMAN"] = function()
 			return self:SpellInBook(addonTable.SpellDB.GhostWolf)
@@ -1189,15 +1240,6 @@ function GoGoMount:GetOptions()
 				get = function() return self.db.char.autoDismount end,
 				set = function(info, v) self.db.char.autoDismount = v end,
 			},
-			genericFastFlyer = {
-				name = L["Consider 310% and 280% mounts the same speed"],
-				type = "toggle",
-				order = getOrderId(),
-				width = "full",
-				hidden = isVanilla,
-				get = function() return self.db.char.genericFastFlyer end,
-				set = function(info, v) self.db.char.genericFastFlyer = v end,
-			},
 			globalPrefMount = {
 				name = L["Preferred mount changes apply to global setting"],
 				type = "toggle",
@@ -1214,6 +1256,15 @@ function GoGoMount:GetOptions()
 				hidden = isVanilla,
 				get = function() return self.db.char.autoLance end,
 				set = function(info, v) self.db.char.autoLance = v end,
+			},
+			useMountJournalFavorite = {
+				name = L["Use Mount Journal's Summon Favorite"],
+				type = "toggle",
+				order = getOrderId(),
+				width = "full",
+				hidden = not C_MountJournal,
+				get = function() return self.db.char.useMountJournalFavorite end,
+				set = function(info, v) self.db.char.useMountJournalFavorite = v end,
 			},
 			debug = {
 				name = L["Print Debug messages"],

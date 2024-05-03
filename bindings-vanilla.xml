@@ -1,4 +1,4 @@
 <Bindings>
-	<Binding name="GOGOMOUNTBINDING1" header="GOGOHEADER" category="ADDONS">
+	<Binding name="GOGOMOUNTBINDING1" header="GOGOMOUNTHEADER" category="ADDONS">
 	</Binding>
 </Bindings>

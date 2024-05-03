@@ -4,7 +4,6 @@ if not L then return end
 
 L["Ahn'Qiraj"] = true
 L["Always use flight forms instead of when moving only"] = true
-L["Consider 310% and 280% mounts the same speed"] = true
 L["Enable automatic dismount"] = true
 L["Mount/Dismount (no flying)"] = true
 L["Mount/Dismount Passenger Mounts"] = true

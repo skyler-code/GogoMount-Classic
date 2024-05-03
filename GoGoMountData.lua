@@ -15,13 +15,15 @@ else
 		{ title = L["Mount/Dismount Passenger Mounts"], SelectPassengerMount = true }, -- passenger mounts
 	}
 end
-BINDING_HEADER_GOGOHEADER = addonName
+
+_G["BINDING_HEADER_"..addonName:upper()] = addonName
 for k, v in ipairs(addonTable.bindings) do
     _G["BINDING_NAME_"..addonName:upper().."BINDING"..k] = v.title
 end
 
 addonTable.SpellDB = {
 	ColdWeatherFlying = 54197,
+	FlightMasterLicense = 90267,
 	FastFlightForm = 40120,
 	FlightForm = 33943,
 	AquaForm = 1066,
@@ -29,24 +31,34 @@ addonTable.SpellDB = {
 	CatForm = 768,
 	GhostWolf = 2645,
 	AspectCheetah = 5118,
+	AspectHawk = 13165,
 	Engineering = 4036,
 	Tailoring = 3908,
 	KodoRiding = 18996,
 	HorseRiding = 824,
+	TigerRiding = 828,
 	UndeadRiding = 10906,
+	RamRiding = 826,
 }
 
 if isVanilla then
 
 	addonTable.TalentIndexDB = {
 		ImpGhostWolf = {2, 6, 2},
-		FelineSwiftness = {2, 6, 1}
+		FeralSwiftness = {2, 6, 1}
 	}
 
 	addonTable.MountDB = {
 
 		[5655]  = {[14] = true, [20] = true, [38] = true},  -- Chestnut Mare
 
+		
+		[8632]  = {[14] = true, [20] = true, [38] = true},  -- Chestnut Mare
+
+
+		[211498]  = {[1440]=true},  -- Trainee's Sentinel Nightsaber
+
+		[5873] = {[14] = true, [20] = true, [38] = true},  -- White Ram
 
 		[15290] = {[14] = true, [20] = true, [38] = true},  -- Brown Kodo
 		[18793] = {[16] = true, [21] = true, [37] = true},  -- Great White Kodo
@@ -220,6 +232,8 @@ else
 		[63641] = {[16] = true, [21] = true, [37] = true},  -- Thunder Bluff Kodo (Great Mulgore Kodo)
 		[64657] = {[14] = true, [20] = true, [38] = true},  -- White Kodo
 		[65641] = {[16] = true, [21] = true, [37] = true},  -- Great Golden Kodo
+		[69820] = {[16] = true, [21] = true, [37] = true},  -- Sunwalker Kodo
+		[69826] = {[16] = true, [21] = true, [37] = true},  -- Sunwalker Kodo
 
 		[34795] = {[14] = true, [20] = true, [38] = true},  -- Red Hawkstrider
 		[35018] = {[14] = true, [20] = true, [38] = true},  -- Purple Hawkstrider
@@ -378,7 +392,7 @@ else
 		[72286] = {[9] = true, [3] = true, [14] = true, [20] = true, [21] = true, [22] = true, [29] = true, [23] = true, [38] = true, [24] = true},  -- Invincible
 		[73313] = {[16] = true, [21] = true, [37] = true},  -- Crimson Deathcharger
 		[75614] = {[9] = true, [3] = true, [6] = true, [14] = true, [20] = true, [21] = true, [22] = true, [29] = true, [23] = true, [38] = true},  -- Celestial Steed
-		[394209] = {[9] = true, [3] = true, [6] = true, [14] = true, [20] = true, [21] = true, [22] = true, [29] = true, [23] = true, [38] = true},  -- Festering Emerald Drake
+		--[394209] = {[9] = true, [3] = true, [6] = true, [14] = true, [20] = true, [21] = true, [22] = true, [29] = true, [23] = true, [38] = true},  -- Festering Emerald Drake
 		--[372677] = {[9] = true, [2] = true, [6] = true, [12] = true, [22] = true, [23] = true, [24] = false, [36] = true},  -- Kalu'ak Whalebone Glider
 		
 		[34406] = {[14] = true, [20] = true, [38] = true},  -- Brown Elekk
