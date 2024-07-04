@@ -1,4 +1,4 @@
-## Interface: 40400
+## Interface: 11502
 ## Title: GoGoMount
 ## Version: 3.4.0
 ## Notes: One-key solution for mounting/dismounting, supports spells, shapeshifting
@@ -8,6 +8,7 @@
 ## X-OriginalVersion: Tak teh Troll @ Shadowsong EU
 
 locales.xml
+bindings.xml
 
 GoGoMountData.lua
 GoGoMount.lua
