@@ -46,6 +46,7 @@ local savedDBDefaults = {
 		globalIgnoreMounts = {},
 		globalPrefMount = false,
 		globalPrefMounts = {},
+		useMountJournalFavorite = true,
 	},
 }
 
@@ -595,7 +596,7 @@ function GoGoMount:PreClick(button)
 	end
 end
 
-function playerHasTalent(talentKey)
+local function playerHasTalent(talentKey)
 	local talentInfo = addonTable.TalentIndexDB[talentKey]
 	if not talentInfo then return false end
 
@@ -615,8 +616,8 @@ function GoGoMount:GetMount()
 			self:DebugAddLine("We are a druid and we're falling, swimming or moving.  Changing shape form.")
 			return self:SpellInBook(self.classSpell)
 		end
-	elseif playerClass == "SHAMAN" and IsOutdoors() and IsMoving() and playerHasTalent("ImpGhostWolf") then
-		self:DebugAddLine("We are a shaman, we're outdoors, and we're moving.  Changing shape form.")
+	elseif playerClass == "SHAMAN" and IsMoving() and playerHasTalent("ImpGhostWolf") then
+		self:DebugAddLine("We are a shaman and we're moving.  Changing shape form.")
 		return self:SpellInBook(self.classSpell)
 	elseif playerClass == "HUNTER" then
 		if self.reapplyHawk and self:GetPlayerAura(addonTable.SpellDB.AspectCheetah) then
@@ -628,7 +629,7 @@ function GoGoMount:GetMount()
 			end
 		elseif IsMoving() then
 			self:DebugAddLine("We are a hunter and we're moving.  Checking for aspects.")
-			local hawkID = select(11, self:GetPlayerAura(GetSpellInfo(addonTable.SpellDB.AspectHawk)))
+			local hawkID = select(11, self:GetPlayerAura(addonTable.SpellDB.AspectHawk))
 			if hawkID then
 				self:DebugAddLine("We have aspect of the hawk.")
 				self.reapplyHawk = hawkID
@@ -642,7 +643,7 @@ function GoGoMount:GetMount()
 
 	self:DebugAddLine("Passed Druid / Shaman forms - nothing selected.")
 
-	if self.db.char.useMountJournalFavorite and C_MountJournal and C_MountJournal.SummonByID then
+	if not isVanilla and self.db.char.useMountJournalFavorite and C_MountJournal and C_MountJournal.SummonByID then
 		C_MountJournal.SummonByID(0)
 		self:DebugAddLine("Using Blizzard favorite mount")
 		return
@@ -720,7 +721,7 @@ function GoGoMount:GetMount()
 			end
 		end
 	end
-	
+
 	local GoGo_TempMounts = {}
 	local engineeringLevel = playerSkills[GetSpellInfo(addonTable.SpellDB.Engineering)]
 	if engineeringLevel < 375 then
@@ -1066,55 +1067,11 @@ function GoGoMount:CanFly()
 		return true
 	end
 
-	if self:SpellInBook(addonTable.SpellDB.ColdWeatherFlying) then -- On Northrend and know cold weather
-		if IsOnMapID(113) then
-			if IsOnMapID(125) then
-				if playerSubZone == C_Map.GetAreaInfo(4564) then
-					if not IsFlyableArea() then
-						self:DebugAddLine("Failed - Player in " .. playerSubZone .. " and not in flyable area.")
-						return false
-					end
-				elseif playerSubZone == C_Map.GetAreaInfo(4619) then -- The Violet Citadel
-					if not IsOutdoors() then
-						self:DebugAddLine("Failed - Player in " .. playerSubZone.. " and not outdoors area.")
-						return false
-					end
-					if not IsFlyableArea() then
-						self:DebugAddLine("Failed - Player in " .. playerSubZone .. " and not in flyable area.")
-						return false
-					end
-					return false
-				elseif playerSubZone == C_Map.GetAreaInfo(4560) then -- The Underbelly
-					
-					return false
-				elseif playerSubZone == C_Map.GetAreaInfo(4395) then
-					if not IsFlyableArea() then
-						self:DebugAddLine("Failed - Player in " .. playerSubZone .. " and not outdoors area.")
-						return false
-					end
-					return false
-				else
-					self:DebugAddLine("Failed - Player in " .. playerSubZone .. " and not in known flyable subzone.")
-					return false
-				end
-			end
-
-			if not IsFlyableArea() then
-				self:DebugAddLine("Failed - Player in " .. playerSubZone .. " and not outdoors area.")
-				return false
-			end
-
-			return true
-		elseif IsOnMapID(126) then --Underbelly
-			if not IsFlyableArea() then
-				self:DebugAddLine("Failed - Player in " .. playerSubZone .. " and not outdoors area.")
-				return false
-			end
-			return true
-		end
+	if IsPlayerSpell(addonTable.SpellDB.ColdWeatherFlying) and IsOnMapID(113) then
+		return true
 	end
 
-	if self:SpellInBook(addonTable.SpellDB.FlightMasterLicense) and IsFlyableArea() then
+	if IsPlayerSpell(addonTable.SpellDB.FlightMasterLicense) and IsFlyableArea() then
 		return true
 	end
 

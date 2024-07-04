@@ -44,7 +44,7 @@ addonTable.SpellDB = {
 if isVanilla then
 
 	addonTable.TalentIndexDB = {
-		ImpGhostWolf = {2, 6, 2},
+		ImpGhostWolf = {2, 2, 2},
 		FeralSwiftness = {2, 6, 1}
 	}
 
