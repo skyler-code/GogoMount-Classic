@@ -10,7 +10,5 @@ L["Mount/Dismount Passenger Mounts"] = true
 L["Mount/Dismount"] = true
 L["Preferred mount changes apply to global setting"] = true
 L["Print Debug messages"] = true
-L["Riding"] = true
 L["Single click to shift from form to travel forms"] = true
-L["The Oculus"] = true
 L["Automatically equip lance when trying to mount argent steeds."] = true

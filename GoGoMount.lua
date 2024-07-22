@@ -15,12 +15,11 @@ local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local _, playerClass = UnitClass("player")
 
 local ridingSkills = {
-	[L["Riding"]] = 0,
-	[GetSpellInfo(addonTable.SpellDB.KodoRiding)] = 0,
-	[GetSpellInfo(addonTable.SpellDB.HorseRiding)] = 0,
-	[GetSpellInfo(addonTable.SpellDB.UndeadRiding)] = 0,
-	[GetSpellInfo(addonTable.SpellDB.TigerRiding)] = 0,
-	[GetSpellInfo(addonTable.SpellDB.RamRiding)] = 0,
+	[addonTable.RidingSkills.KodoRiding] = false,
+	[addonTable.RidingSkills.HorseRiding] = false,
+	[addonTable.RidingSkills.UndeadRiding] = false,
+	[addonTable.RidingSkills.TigerRiding] = false,
+	[addonTable.RidingSkills.RamRiding] = false,
 }
 
 local savedDBDefaults = {
@@ -49,28 +48,6 @@ end
 
 local function IsMoving()
     return GetUnitSpeed("player") ~= 0
-end
-
-local function FilterMountsIn(PlayerMounts, FilterID)
-	local filteredMounts = {}
-	for _, MountID in pairs(PlayerMounts) do
-		local mountData = addonTable.MountDB[MountID]
-		if mountData and mountData[FilterID] then
-			tinsert(filteredMounts, MountID)
-		end
-	end
-	return filteredMounts
-end
-
-local function FilterMountsOut(PlayerMounts, FilterID)
-	local filteredMounts = {}
-	for _, MountID in pairs(PlayerMounts) do
-		local mountData = addonTable.MountDB[MountID]
-		if mountData and not mountData[FilterID] then
-			tinsert(filteredMounts, MountID)
-		end
-	end
-	return filteredMounts
 end
 
 local GOGO_COMMANDS = {
@@ -122,15 +99,8 @@ local GOGO_MESSAGES = {
 }
 
 function GoGoMount:ParseSpellbook()
-	self.playerSpellbook = {}
-	for i = 1, GetNumSpellTabs() do
-		local offset, numSlots = select(3, GetSpellTabInfo(i))
-		for j = offset+1, offset+numSlots do
-			local spellName, _, spellID = GetSpellBookItemName(j, BOOKTYPE_SPELL)
-			if spellID then
-				self.playerSpellbook[spellID] = spellName
-			end
-		end
+	for k in pairs(ridingSkills) do
+		ridingSkills[k] = IsPlayerSpell(k)
 	end
 end
 
@@ -139,16 +109,12 @@ function GoGoMount:SpellInBook(spell)
 		self:DebugAddLine("Running spell function")
 		return spell()
 	end
-	self:DebugAddLine("Searching for spell", GetSpellInfo(spell), spell)
-	local spellInBook = self.playerSpellbook[spell]
-	if spellInBook then
-		self:DebugAddLine("Found spell", spellInBook)
-		return spellInBook
+	local spellInfo = GetSpellInfo(spell)
+	self:DebugAddLine("Searching for spell", spellInfo, spell)
+	if IsPlayerSpell(spell) then
+		self:DebugAddLine("Found spell", spellInfo)
+		return spellInfo
 	end
-end
-
-function GoGoMount:GetPlayerAura(spell)
-	return C_UnitAuras.GetPlayerAuraBySpellID(spell)
 end
 
 function GoGoMount:CancelPlayerBuff(spell)
@@ -202,7 +168,6 @@ function GoGoMount:OnInitialize()
 	LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, addonName)
 
 	self:RegisterEvent("PLAYER_ENTERING_WORLD")
-	self:RegisterEvent("SKILL_LINES_CHANGED")
 	self:RegisterEvent("BAG_UPDATE_DELAYED")
 	self:RegisterEvent("SPELLS_CHANGED")
 	self:RegisterEvent("TAXIMAP_OPENED")
@@ -243,22 +208,9 @@ end
 
 function GoGoMount:PLAYER_ENTERING_WORLD(event)
 	self:DebugAddLine(event)
-	self:BuildMountList()
 
 	self:ParseSpellbook()
 	self:SetClassSpell()
-end
-
-function GoGoMount:SKILL_LINES_CHANGED(event)
-	self:DebugAddLine(event)
-	for skillIndex = 1, GetNumSkillLines() do
-		local skillName, isHeader, _, skillRank = GetSkillLineInfo(skillIndex)
-		if not isHeader then
-			if ridingSkills[skillName] then
-				ridingSkills[skillName] = skillRank
-			end
-		end
-	end
 end
 
 function GoGoMount:BAG_UPDATE_DELAYED(event)
@@ -285,8 +237,7 @@ function GoGoMount:PreClick(button)
 		self:DebugAddLine("Starts")
 		self:DebugAddLine("Location = " .. GetRealZoneText() .. " - " .. GetZoneText() .. " - " ..GetSubZoneText() .. " - " .. GetMinimapZoneText())
 		self:DebugAddLine("Current unit speed is " .. GetUnitSpeed("player"))
-		local level = UnitLevel("player")
-		self:DebugAddLine("We are level " .. level)
+		self:DebugAddLine("We are level " .. UnitLevel("player"))
 		self:DebugAddLine("We are a " .. playerClass)
 		if IsOutdoors() then
 			self:DebugAddLine("We are outdoors as per IsOutdoors()")
@@ -313,8 +264,6 @@ function GoGoMount:PreClick(button)
 		else
 			self:DebugAddLine("We are not moving as per IsMoving()")
 		end
-		local position = C_Map.GetPlayerMapPosition(C_Map.GetBestMapForUnit("player"), "player")
-		self:DebugAddLine("Player location: X = ".. position.x .. ", Y = " .. position.y)
 	end
 
 	if not InCombatLockdown() then
@@ -369,10 +318,10 @@ function GoGoMount:GetMount()
 			end
 		elseif IsMoving() then
 			self:DebugAddLine("We are a hunter and we're moving.  Checking for aspects.")
-			local hawkID = select(11, C_UnitAuras.GetPlayerAuraBySpellID(addonTable.SpellDB.AspectHawk))
+			local hawkID = C_UnitAuras.GetPlayerAuraBySpellID(addonTable.SpellDB.AspectHawk)
 			if hawkID then
 				self:DebugAddLine("We have aspect of the hawk.")
-				self.reapplyHawk = hawkID
+				self.reapplyHawk = hawkID.spellId
 			end
 			local cheetah = self:SpellInBook(addonTable.SpellDB.AspectCheetah)
 			if cheetah then
@@ -385,11 +334,8 @@ function GoGoMount:GetMount()
 
 	local mounts = {}
 
-	local canRide = self:CanRide()
-	local canUseEpic = UnitLevel("player") == 60
-
-	if canRide then
-		if canUseEpic then
+	if self:CanRide() then
+		if UnitLevel("player") == 60 and #self.EpicMounts > 0 then
 			mounts = self.EpicMounts
 		else
 			mounts = self.RareMounts
@@ -398,38 +344,24 @@ function GoGoMount:GetMount()
 
 	if self.db.char.debug then
 		for k,v in pairs(ridingSkills) do
-			self:DebugAddLine(k, "=", v)
+			self:DebugAddLine(GetSpellInfo(k), "=", v)
 		end
 	end
-
-	if #mounts == 0 then
+	local mountCount = #mounts
+	if mountCount == 0 then
 		if self.classSpell then
 			self:DebugAddLine("No mounts found. Forcing "..playerClass.." shape form.")
-			return self:SpellInBook(playerClass)
-		else
-			self:DebugAddLine("No mounts found.  Giving up the search.")
-			return
+			return self:SpellInBook(self.classSpell)
+		end
+		self:DebugAddLine("No mounts found.  Giving up the search.")
+		return
+	end
+	if self.db.char.debug then
+		for a = 1, mountCount do
+			self:DebugAddLine("Found mount", mounts[a], "- included in random pick.")
 		end
 	end
-
-	if #mounts == 0 and playerClass == "SHAMAN" and self:SpellInBook(addonTable.SpellDB.GhostWolf) then
-		tinsert(mounts, addonTable.SpellDB.GhostWolf)
-	end
-
-	if #mounts >= 1 then
-		if self.db.char.debug then
-			for a = 1, #mounts do
-				self:DebugAddLine("Found mount", mounts[a], "- included in random pick.")
-			end
-		end
-		local selected = mounts[math.random(#mounts)]
-		if type(selected) == "string" then
-			self:DebugAddLine("Selected string", selected)
-			return selected
-		else
-			return self:GetIDName(selected)
-		end
-	end
+	return mountCount > 1 and mounts[math.random(mountCount)] or mounts[1]
 end
 
 function GoGoMount:Dismount(button)
@@ -452,20 +384,16 @@ function GoGoMount:Dismount(button)
 end
 
 function GoGoMount:BuildMountList()
-	self.EpicMounts = {}
-	self.RareMounts = {}
+	self.EpicMounts, self.RareMounts = {}, {}
 	for bag = BACKPACK_CONTAINER, NUM_BAG_SLOTS do
 		for slot = 1, GetContainerNumSlots(bag) do
 			local item = Item:CreateFromBagAndSlot(bag, slot)
-			if not item:IsItemEmpty() then
-				local itemId = item:GetItemID()
-				if addonTable.MountDB[itemId] then
-					local itemQuality = item:GetItemQuality()
-					if itemQuality == Enum.ItemQuality.Epic then
-						tinsert(self.EpicMounts, itemId)
-					else
-						tinsert(self.RareMounts, itemId)
-					end
+			if not item:IsItemEmpty() and addonTable.MountDB[item:GetItemID()]  then
+				local slotInfo = ("%s %s"):format(bag, slot)
+				if item:GetItemQuality() > Enum.ItemQuality.Rare then
+					tinsert(self.EpicMounts, slotInfo)
+				else
+					tinsert(self.RareMounts, slotInfo)
 				end
 			end
 		end
@@ -486,28 +414,9 @@ function GoGoMount:IsShifted()
 	self:DebugAddLine("Not shifted")
 end
 
-function GoGoMount:GetIDName(itemid)
-	if type(itemid) == "table" then
-		local idTable = {}
-		for k,tableItem in pairs(itemid) do
-			local valToUse = tableItem == true and k or tableItem
-			tinsert(idTable, self:GetIDName(valToUse))
-		end
-		local idString = tconc(idTable, ", ")
-		self:DebugAddLine("Itemname string is " .. idString)
-		return idString
-	end
-	if addonTable.MountDB[itemid] then
-		if self.db.char.debug then
-			self:DebugAddLine("GetItemInfo for", itemid, GetItemInfo(itemid))
-		end
-		return GetItemInfo(itemid) or "Unknown Mount"
-	end
-end
-
 function GoGoMount:FillButton(button, mount)
 	if mount then
-		self:DebugAddLine("Casting " .. mount)
+		self:DebugAddLine("Casting", mount)
 		button:SetAttribute("macrotext", SLASH_USE1.." "..mount)
 	else
 		button:SetAttribute("macrotext", nil)
@@ -516,8 +425,8 @@ end
 
 function GoGoMount:CanRide()
 	for k,v in pairs(ridingSkills) do
-		if v > 0 then
-			self:DebugAddLine("Passed - Player " ..k.." level is "..v..'.')
+		if v then
+			self:DebugAddLine("Passed - " ..GetSpellInfo(k).." is known.")
 			return true
 		end
 	end
@@ -560,6 +469,10 @@ end
 
 function GoGoMount:DebugAddLine(...)
 	if self.db.char.debug then
+		local arg1 = ...
+		if type(arg1) == 'function' then
+			return self:DebugAddLine(arg1())
+		end
 		local callingFunc = debugstack(2,1,0)
 		local funcMatch = strmatch(callingFunc, ("`(.+)'"))
 		self:Msg(funcMatch or "", ...)
