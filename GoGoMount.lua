@@ -14,13 +14,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 
 local _, playerClass = UnitClass("player")
 
-local ridingSkills = {
-	[addonTable.RidingSkills.KodoRiding] = false,
-	[addonTable.RidingSkills.HorseRiding] = false,
-	[addonTable.RidingSkills.UndeadRiding] = false,
-	[addonTable.RidingSkills.TigerRiding] = false,
-	[addonTable.RidingSkills.RamRiding] = false,
-}
+local ridingSkills = {}
 
 local savedDBDefaults = {
 	char = {
@@ -99,8 +93,8 @@ local GOGO_MESSAGES = {
 }
 
 function GoGoMount:ParseSpellbook()
-	for k in pairs(ridingSkills) do
-		ridingSkills[k] = IsPlayerSpell(k)
+	for _, v in pairs(addonTable.RidingSkills) do
+		ridingSkills[v] = IsPlayerSpell(v)
 	end
 end
 
